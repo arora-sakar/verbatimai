@@ -124,19 +124,37 @@ async def upload_csv_feedback(
 
 @router.get("/", response_model=List[FeedbackResponse])
 async def get_feedback(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
-    sentiment: Optional[str] = Query(None, regex="^(positive|negative|neutral)$"),
+    skip: Optional[int] = Query(0, ge=0),
+    limit: Optional[int] = Query(20, ge=1, le=100),
+    sentiment: Optional[str] = Query(None),
     source: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Get paginated feedback items with optional filtering"""
-    query = db.query(FeedbackItem).filter(FeedbackItem.owner_id == current_user.id)
+    # Log request parameters
+    print(f"Get feedback params - skip: {skip}, limit: {limit}, sentiment: {sentiment}, source: {source}, search: {search}")
+    
+    # Convert parameters to correct types
+    try:
+        skip = int(skip) if skip is not None else 0
+        limit = int(limit) if limit is not None else 20
+        # Ensure limit is within bounds
+        limit = min(max(1, limit), 100)
+    except ValueError as e:
+        print(f"Parameter conversion error: {str(e)}")
+        skip = 0
+        limit = 20
+    
+    # Get user ID
+    user_id = current_user.id
+    print(f"User ID: {user_id}")
+
+    query = db.query(FeedbackItem).filter(FeedbackItem.owner_id == user_id)
     
     # Apply filters
-    if sentiment:
+    if sentiment and sentiment in ['positive', 'negative', 'neutral']:
         query = query.filter(FeedbackItem.sentiment == sentiment)
     
     if source:

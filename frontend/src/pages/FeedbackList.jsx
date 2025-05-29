@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from 'react-query';
 import api from '../services/api';
+import { useAuthStore } from '../store/authStore';
 
 // Components
 import FeedbackFilters from '../components/feedback/FeedbackFilters';
@@ -8,6 +9,9 @@ import FeedbackItem from '../components/feedback/FeedbackItem';
 import Pagination from '../components/common/Pagination';
 
 const FeedbackList = () => {
+  // Get current user
+  const { user } = useAuthStore();
+  
   // State for filters and pagination
   const [filters, setFilters] = useState({
     sentiment: '',
@@ -20,19 +24,33 @@ const FeedbackList = () => {
 
   // Fetch feedback data with filters
   const { data: feedbackItems, isLoading, refetch } = useQuery(
-    ['feedback', filters, currentPage],
+    ['feedback', filters, currentPage, user?.id],
     async () => {
-      const params = {
-        ...filters,
-        skip: (currentPage - 1) * itemsPerPage,
-        limit: itemsPerPage,
-      };
-      
-      const response = await api.get('/feedback/', { params });
-      // In a real implementation, we would get total count from headers or response
-      // For now, we'll simulate it
-      setTotalItems(response.data.length > 0 ? 50 : 0); // Just a placeholder
-      return response.data;
+      try {
+        const params = {
+          skip: (currentPage - 1) * itemsPerPage,
+          limit: itemsPerPage,
+        };
+        
+        // Only add filters if they have values
+        if (filters.sentiment) params.sentiment = filters.sentiment;
+        if (filters.source) params.source = filters.source;
+        if (filters.search) params.search = filters.search;
+        
+        console.log('Fetching feedback with params:', params);
+        
+        const response = await api.get('/feedback/', { params });
+        console.log('Feedback response:', response.data);
+        
+        // In a real implementation, we would get total count from headers or response
+        // For now, we'll simulate it
+        setTotalItems(response.data.length > 0 ? 50 : 0); // Just a placeholder
+        return response.data || [];
+      } catch (error) {
+        console.error('Error fetching feedback:', error);
+        // Return an empty array in case of error to avoid rendering issues
+        return [];
+      }
     },
     {
       keepPreviousData: true,

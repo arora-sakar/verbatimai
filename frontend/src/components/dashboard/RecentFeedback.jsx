@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
 
 const RecentFeedback = ({ items }) => {
-  if (!items || items.length === 0) {
+  // Guard against empty or undefined items
+  if (!items || !Array.isArray(items) || items.length === 0) {
     return (
       <div className="text-sm text-gray-500 italic">
         No feedback available yet
@@ -33,18 +34,22 @@ const RecentFeedback = ({ items }) => {
           <li key={item.id} className="py-3">
             <div className="flex items-center justify-between">
               <div className="truncate text-sm font-medium text-gray-800">
-                {item.feedback_text.length > 100 
-                  ? `${item.feedback_text.substring(0, 100)}...` 
-                  : item.feedback_text}
+                {item && item.feedback_text ? (
+                  item.feedback_text.length > 100 
+                    ? `${item.feedback_text.substring(0, 100)}...` 
+                    : item.feedback_text
+                ) : (
+                  "No feedback text available"
+                )}
               </div>
               <div className="ml-2">
                 {renderSentimentBadge(item.sentiment)}
               </div>
             </div>
             <div className="mt-1 flex items-center text-xs text-gray-500">
-              <span>{new Date(item.created_at).toLocaleDateString()}</span>
+              <span>{item && item.created_at ? new Date(item.created_at).toLocaleDateString() : 'No date'}</span>
               <span className="mx-1">&middot;</span>
-              <span>{item.source}</span>
+              <span>{item && item.source ? item.source : 'Unknown source'}</span>
             </div>
           </li>
         ))}

@@ -1,6 +1,13 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { useQueryClient } from 'react-query'
 import api from '../services/api'
+
+// Create a function to get access to the queryClient outside of components
+let queryClientInstance = null
+export const setQueryClientForAuth = (client) => {
+  queryClientInstance = client
+}
 
 export const useAuthStore = create(
   persist(
@@ -50,8 +57,26 @@ export const useAuthStore = create(
       },
       
       logout: () => {
+        // Clear authentication state
         set({ user: null, token: null, isAuthenticated: false })
         delete api.defaults.headers.common['Authorization']
+        
+        // Clear React Query cache if available
+        if (queryClientInstance) {
+          console.log('Clearing React Query cache on logout')
+          queryClientInstance.clear()
+        } else {
+          console.warn('QueryClient not available, cache not cleared')
+        }
+        
+        // Also clear localStorage cache of React Query
+        try {
+          const queryKeys = Object.keys(localStorage).filter(key => key.startsWith('reactQueryData'))
+          queryKeys.forEach(key => localStorage.removeItem(key))
+          console.log(`Cleared ${queryKeys.length} React Query cache items from localStorage`)
+        } catch (e) {
+          console.error('Error clearing React Query localStorage cache:', e)
+        }
       },
       
       checkAuth: async () => {

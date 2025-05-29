@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from 'react-query';
 import api from '../../services/api';
+import { useAuthStore } from '../../store/authStore';
 
 const FeedbackFilters = ({ filters, onFilterChange }) => {
   const [searchTerm, setSearchTerm] = useState(filters.search || '');
+  const { user } = useAuthStore();
   
   // Fetch sources for dropdown
   const { data: sources } = useQuery(
-    'sources',
+    ['sources', user?.id],
     async () => {
       const response = await api.get('/analytics/sources');
       return response.data;

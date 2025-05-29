@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from 'react-query'
 import api from '../services/api'
+import { useAuthStore } from '../store/authStore'
 
 // Components
 import SentimentChart from '../components/dashboard/SentimentChart'
@@ -11,9 +12,11 @@ import RecentFeedback from '../components/dashboard/RecentFeedback'
 const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true)
 
+  const { user } = useAuthStore();
+
   // Fetch dashboard data
   const { data: analyticsData, isLoading: isLoadingAnalytics } = useQuery(
-    'analytics',
+    ['analytics', user?.id],
     async () => {
       const response = await api.get('/analytics/summary')
       return response.data
@@ -26,12 +29,18 @@ const Dashboard = () => {
 
   // Fetch recent feedback
   const { data: recentFeedback, isLoading: isLoadingFeedback } = useQuery(
-    'recentFeedback',
+    ['recentFeedback', user?.id],
     async () => {
-      const response = await api.get('/feedback/', {
-        params: { limit: 5 },
-      })
-      return response.data
+      try {
+        const response = await api.get('/feedback/', {
+          params: { limit: 5 },
+        });
+        console.log('Recent feedback response:', response.data);
+        return response.data || [];
+      } catch (error) {
+        console.error('Error fetching recent feedback:', error);
+        return [];
+      }
     },
     {
       refetchOnWindowFocus: false,

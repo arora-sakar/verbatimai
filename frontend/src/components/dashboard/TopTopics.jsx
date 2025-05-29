@@ -5,8 +5,12 @@ import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Toolti
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const TopTopics = ({ positiveTopics, negativeTopics }) => {
+  // Ensure topics are valid arrays
+  const validPositiveTopics = Array.isArray(positiveTopics) ? positiveTopics : [];
+  const validNegativeTopics = Array.isArray(negativeTopics) ? negativeTopics : [];
+  
   // Handle empty data
-  if (!positiveTopics?.length && !negativeTopics?.length) {
+  if (!validPositiveTopics.length && !validNegativeTopics.length) {
     return (
       <div className="flex items-center justify-center h-64 text-gray-500">
         No topics found in feedback
@@ -45,8 +49,8 @@ const TopTopics = ({ positiveTopics, negativeTopics }) => {
 
   return (
     <div className="space-y-4">
-      {renderTopicList(positiveTopics, 'positive')}
-      {renderTopicList(negativeTopics, 'negative')}
+      {renderTopicList(validPositiveTopics, 'positive')}
+      {renderTopicList(validNegativeTopics, 'negative')}
     </div>
   );
 };
