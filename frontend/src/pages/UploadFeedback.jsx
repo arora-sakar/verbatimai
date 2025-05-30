@@ -238,10 +238,30 @@ const UploadFeedback = () => {
         {/* CSV Upload Section */}
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <h2 className="text-lg font-medium mb-4">Upload CSV File</h2>
-          <p className="text-sm text-gray-600 mb-4">
-            Upload a CSV file with customer feedback. The CSV must include a <code>feedback_text</code> column.
-            Optional columns: <code>source</code>, <code>rating</code>, <code>customer_name</code>.
-          </p>
+          <div className="text-sm text-gray-600 mb-4 space-y-2">
+            <p>
+              Upload a CSV file with customer feedback. The CSV must include a <code>feedback_text</code> column.
+              Optional columns: <code>source</code>, <code>rating</code>, <code>customer_name</code>.
+            </p>
+            <p className="text-xs text-gray-500">
+              <svg className="inline-block h-4 w-4 mr-1 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <strong>Important:</strong> Make sure all text containing commas is enclosed in quotes (""). Each row must have the same number of columns.
+            </p>
+            <p>
+              <a 
+                href="/sample_template.csv" 
+                download="feedback_template.csv"
+                className="text-primary-600 hover:text-primary-800 font-medium inline-flex items-center"
+              >
+                <svg className="mr-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                </svg>
+                Download CSV Template
+              </a>
+            </p>
+          </div>
           
           <div
             {...getRootProps()}

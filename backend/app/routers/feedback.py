@@ -1,9 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
+from fastapi.responses import JSONResponse
+import re
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
 import pandas as pd
 import io
+import csv  # Import csv module for quoting constants
+import json
 
 from ..db.database import get_db
 from ..models.models import User, FeedbackItem
@@ -11,6 +15,25 @@ from ..schemas.schemas import FeedbackCreate, FeedbackResponse
 from ..routers.auth import get_current_user
 from ..services.ai_service import analyze_feedback
 from ..core.config import settings
+
+# Custom JSON encoder to handle datetime objects
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
+
+# Custom JSONResponse class that uses our DateTimeEncoder
+class CustomJSONResponse(JSONResponse):
+    def render(self, content) -> bytes:
+        return json.dumps(
+            content,
+            ensure_ascii=False,
+            allow_nan=False,
+            indent=None,
+            separators=(",", ":"),
+            cls=DateTimeEncoder,  # Use our custom encoder
+        ).encode("utf-8")
 
 router = APIRouter()
 
@@ -63,8 +86,86 @@ async def upload_csv_feedback(
     
     # Read CSV file
     try:
+        # Read CSV file and handle missing values
         contents = await file.read()
-        df = pd.read_csv(io.StringIO(contents.decode('utf-8')))
+        
+        try:
+            # First try to preview the file to detect possible issues
+            csv_content = contents.decode('utf-8')
+            
+            # Check for common CSV issues before parsing
+            lines = csv_content.split('\n')
+            header = lines[0].strip().split(',')
+            header_count = len(header)
+            
+            # Check if any lines have inconsistent column counts
+            for i, line in enumerate(lines[1:], 1):
+                if line.strip():  # Skip empty lines
+                    # Count commas not inside quotes
+                    in_quotes = False
+                    comma_count = 0
+                    for char in line:
+                        if char == '"':
+                            in_quotes = not in_quotes
+                        elif char == ',' and not in_quotes:
+                            comma_count += 1
+                    
+                    field_count = comma_count + 1
+                    if field_count != header_count:
+                        # Provide a more helpful error message with sample line content
+                        line_preview = line[:50] + "..." if len(line) > 50 else line
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"CSV Format Error: Line {i+1} has {field_count} columns when {header_count} were expected.\n\nPossible issues:\n1. Unquoted commas in text fields\n2. Missing or extra commas\n3. Incorrect quoting\n\nProblematic line preview: {line_preview}\n\nTip: All text containing commas should be enclosed in double quotes (\"text, with commas\")."
+                        )
+            
+            # Try to parse the CSV with pandas
+            df = pd.read_csv(
+                io.StringIO(csv_content),
+                on_bad_lines='warn',  # Warn about bad lines but don't fail
+                quoting=csv.QUOTE_MINIMAL,  # Handle quoted fields with commas
+                escapechar='\\',  # Allow escaping of special characters
+                skipinitialspace=True,  # Skip spaces after delimiter
+                encoding='utf-8',  # Ensure proper encoding
+                engine='python'  # Use the more flexible Python parser
+            )
+            
+            # Replace NaN values with None (will become NULL in the database)
+            df = df.where(pd.notnull(df), None)
+        except HTTPException:
+            # Re-raise our custom formatted exceptions
+            raise
+        except Exception as csv_error:
+            # More user-friendly error message for CSV parsing issues
+            error_message = str(csv_error)
+            
+            if "Expected" in error_message and "fields" in error_message and "saw" in error_message:
+                # Format a more user-friendly message for inconsistent column counts
+                line_match = re.search(r'line (\d+)', error_message)
+                line_number = line_match.group(1) if line_match else "some"
+                
+                expected_match = re.search(r'Expected (\d+) fields', error_message)
+                expected = expected_match.group(1) if expected_match else "a certain number of"
+                
+                saw_match = re.search(r'saw (\d+)', error_message)
+                saw = saw_match.group(1) if saw_match else "a different number of"
+                
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"CSV Format Error: Line {line_number} has {saw} columns when {expected} were expected.\n\nHow to fix this:\n1. Make sure all text fields containing commas are enclosed in double quotes\n2. Check line {line_number} for missing or extra commas\n3. Consider opening your CSV in a spreadsheet application to fix formatting issues\n\nExpected format: feedback_text,source,rating,customer_id\nExample: \"Great service, very responsive\",Email,5,customer123"
+                )
+            elif "could not convert string to float" in error_message:
+                # Handle numeric conversion errors
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"CSV Format Error: A column expected to be numeric contains text.\n\nPossible issues:\n1. Rating column contains non-numeric values\n2. Columns are in the wrong order\n\nPlease check your CSV file and ensure numeric columns only contain numbers."
+                )
+            else:
+                # Handle other CSV parsing errors
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"CSV Parsing Error: There's an issue with your file format.\n\nDetails: {error_message}\n\nPlease check that:\n1. Your CSV has the required 'feedback_text' column\n2. Text with commas is properly quoted\n3. Each row has the same number of columns as the header"
+                )
         
         # Validate CSV structure
         if 'feedback_text' not in df.columns:
@@ -91,24 +192,47 @@ async def upload_csv_feedback(
                 break
             
             try:
+                # Skip rows with empty feedback_text
+                if row['feedback_text'] is None or pd.isna(row['feedback_text']) or str(row['feedback_text']).strip() == '':
+                    print(f"Skipping row with empty feedback_text")
+                    failed_count += 1
+                    continue
+                    
                 feedback_data = {
-                    'feedback_text': row['feedback_text'],
-                    'source': row.get('source', 'CSV Upload'),
-                    'customer_name': row.get('customer_id', None),
+                    'feedback_text': str(row['feedback_text']),  # Ensure it's a string
+                    'source': row.get('source', 'CSV Upload') if not pd.isna(row.get('source')) else 'CSV Upload',
+                    'customer_name': row.get('customer_id') if not pd.isna(row.get('customer_id')) else None,
                     'owner_id': current_user.id,
                 }
+                
+                # Handle rating - convert to integer if present
+                if 'rating' in row and row['rating'] is not None and not pd.isna(row['rating']):
+                    try:
+                        feedback_data['rating'] = int(row['rating'])
+                    except (ValueError, TypeError):
+                        # If rating can't be converted to int, skip it
+                        pass
                 
                 new_feedback = FeedbackItem(**feedback_data)
                 db.add(new_feedback)
                 new_feedback_items.append(new_feedback)  # Add to our tracking list
                 created_count += 1
-            except Exception:
+            except Exception as e:
+                print(f"Error processing row: {str(e)}")
                 failed_count += 1
         
         # Commit all changes
-        db.commit()
+        try:
+            db.commit()
+        except Exception as e:
+            db.rollback()  # Rollback the transaction on error
+            print(f"Database error: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Error saving feedback: {str(e)}",
+            )
         
-        # Process all feedback asynchronously
+        # Only process feedback items if the commit was successful
         print(f"Analyzing {len(new_feedback_items)} feedback items...")
         for feedback_item in new_feedback_items:
             try:
@@ -124,13 +248,30 @@ async def upload_csv_feedback(
             "total": created_count + failed_count,
         }
     
+    except HTTPException:
+        # Re-raise custom HTTP exceptions
+        raise
     except Exception as e:
+        # General error handler
+        error_message = str(e)
+        status_code = status.HTTP_400_BAD_REQUEST
+        
+        # Provide more specific guidance based on common error patterns
+        if "memory" in error_message.lower():
+            detail = f"The file is too large to process. Please keep files under {settings.MAX_UPLOAD_SIZE / (1024 * 1024)}MB or split into smaller files."
+        elif "encoding" in error_message.lower():
+            detail = f"File encoding error: {error_message}. Please save your CSV file with UTF-8 encoding and try again."
+        elif "feedback_text" in error_message.lower():
+            detail = "The CSV file must contain a 'feedback_text' column. Please check your column headers."
+        else:
+            detail = f"Error processing CSV file: {error_message}. Please check the file format and try again."
+        
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Error processing CSV file: {str(e)}",
+            status_code=status_code,
+            detail=detail
         )
 
-@router.get("/", response_model=List[FeedbackResponse])
+@router.get("/")
 async def get_feedback(
     skip: Optional[int] = Query(0, ge=0),
     limit: Optional[int] = Query(20, ge=1, le=100),
@@ -171,11 +312,35 @@ async def get_feedback(
     if search:
         query = query.filter(FeedbackItem.feedback_text.ilike(f"%{search}%"))
     
-    # Apply pagination
+    # Get total count before pagination
     total = query.count()
+    
+    # Apply pagination
     items = query.order_by(FeedbackItem.created_at.desc()).offset(skip).limit(limit).all()
     
-    return items
+    # Convert SQLAlchemy models to JSON-compatible format
+    items_data = []
+    for item in items:
+        item_dict = {
+            "id": item.id,
+            "feedback_text": item.feedback_text,
+            "source": item.source,
+            "rating": item.rating,
+            "sentiment": item.sentiment,
+            "topics": item.topics,
+            "created_at": item.created_at,
+            "customer_name": item.customer_name,
+            "customer_email": item.customer_email
+        }
+        items_data.append(item_dict)
+    
+    # Create a response with total count header and proper datetime handling
+    response = CustomJSONResponse(
+        content=items_data,
+        headers={"X-Total-Count": str(total)}
+    )
+    
+    return response
 
 @router.get("/{feedback_id}", response_model=FeedbackResponse)
 async def get_feedback_by_id(

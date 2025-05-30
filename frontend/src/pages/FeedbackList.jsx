@@ -23,7 +23,7 @@ const FeedbackList = () => {
   const itemsPerPage = 10;
 
   // Fetch feedback data with filters
-  const { data: feedbackItems, isLoading, refetch } = useQuery(
+  const { data: feedbackResponse, isLoading, refetch } = useQuery(
     ['feedback', filters, currentPage, user?.id],
     async () => {
       try {
@@ -42,9 +42,10 @@ const FeedbackList = () => {
         const response = await api.get('/feedback/', { params });
         console.log('Feedback response:', response.data);
         
-        // In a real implementation, we would get total count from headers or response
-        // For now, we'll simulate it
-        setTotalItems(response.data.length > 0 ? 50 : 0); // Just a placeholder
+        // Get total count from headers
+        const totalCount = parseInt(response.headers['x-total-count'] || '0');
+        setTotalItems(totalCount);
+        
         return response.data || [];
       } catch (error) {
         console.error('Error fetching feedback:', error);
@@ -90,10 +91,10 @@ const FeedbackList = () => {
           <div className="flex justify-center items-center p-8">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-600"></div>
           </div>
-        ) : feedbackItems && feedbackItems.length > 0 ? (
+        ) : feedbackResponse && feedbackResponse.length > 0 ? (
           <div>
             <ul className="divide-y divide-gray-200">
-              {feedbackItems.map((item) => (
+              {feedbackResponse.map((item) => (
                 <FeedbackItem key={item.id} item={item} />
               ))}
             </ul>
