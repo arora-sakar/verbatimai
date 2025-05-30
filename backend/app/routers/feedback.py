@@ -379,8 +379,8 @@ async def analyze_and_update_feedback(db: Session, feedback: FeedbackItem):
     try:
         print(f"Starting analysis for feedback: '{feedback.feedback_text[:50]}...'")
         
-        # Call AI service to analyze feedback
-        result = await analyze_feedback(feedback.feedback_text)
+        # Call AI service to analyze feedback with rating
+        result = await analyze_feedback(feedback.feedback_text, feedback.rating)
         print(f"Analysis result: {result}")
         
         # Update feedback with analysis results

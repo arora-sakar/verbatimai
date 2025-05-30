@@ -2,19 +2,40 @@ from typing import Dict, List, Any
 import httpx
 from ..core.config import settings
 
-async def analyze_feedback(text: str) -> Dict[str, Any]:
+async def analyze_feedback(text: str, rating: int = None) -> Dict[str, Any]:
     """
     Analyze feedback text to extract sentiment and topics
-    This is a simple implementation that would connect to Claude or another LLM API
-    In a real application, you would implement proper error handling and retry logic
+    This implementation can use both text analysis and rating for sentiment determination
     """
     if settings.AI_SERVICE_TYPE == "claude":
-        return await analyze_with_claude(text)
+        result = await analyze_with_claude(text)
     elif settings.AI_SERVICE_TYPE == "openai":
-        return await analyze_with_openai(text)
+        result = await analyze_with_openai(text)
     else:
         # Fallback to simple rule-based analysis
-        return analyze_local(text)
+        result = analyze_local(text, rating)
+    
+    # If rating is provided, we can further adjust the sentiment
+    # Note: We do this here as a fallback only if it wasn't already handled
+    # by the analyze_local function
+    if rating is not None and "claude" in settings.AI_SERVICE_TYPE or "openai" in settings.AI_SERVICE_TYPE:
+        # Define rating thresholds
+        # For a 5-star rating system: 1-2 = negative, 3 = neutral, 4-5 = positive
+        if rating <= 2:  # Low rating
+            rating_sentiment = "negative"
+        elif rating == 3:  # Middle rating
+            rating_sentiment = "neutral"
+        else:  # High rating
+            rating_sentiment = "positive"
+        
+        # If AI sentiment conflicts with rating-based sentiment, prioritize rating
+        # But log the discrepancy for potential review
+        ai_sentiment = result.get("sentiment")
+        if ai_sentiment and ai_sentiment != rating_sentiment:
+            print(f"Sentiment mismatch - AI: {ai_sentiment}, Rating-based: {rating_sentiment}, Rating: {rating}")
+            result["sentiment"] = rating_sentiment
+            
+    return result
 
 async def analyze_with_claude(text: str) -> Dict[str, Any]:
     """Analyze feedback using Claude API"""
@@ -79,13 +100,14 @@ async def analyze_with_openai(text: str) -> Dict[str, Any]:
     # For now, fallback to local analysis
     return analyze_local(text)
 
-def analyze_local(text: str) -> Dict[str, Any]:
+def analyze_local(text: str, rating: int = None) -> Dict[str, Any]:
     """
     Simple rule-based sentiment and topic analysis
-    This is a very basic implementation for fallback purposes
+    This version can incorporate the rating value if provided
     """
     print(f"Using local analysis for text: '{text[:50]}...'")
     
+    # First determine sentiment based on text analysis
     # Simple sentiment analysis based on keyword matching
     positive_words = ["good", "great", "excellent", "awesome", "love", "happy", "satisfied", "recommend"]
     negative_words = ["bad", "poor", "terrible", "awful", "hate", "disappointed", "dissatisfied", "problem", "issue"]
@@ -99,13 +121,37 @@ def analyze_local(text: str) -> Dict[str, Any]:
     # Log word counts
     print(f"Positive words: {positive_count}, Negative words: {negative_count}")
     
-    # Determine sentiment
+    # Determine text-based sentiment
     if positive_count > negative_count:
-        sentiment = "positive"
+        text_sentiment = "positive"
     elif negative_count > positive_count:
-        sentiment = "negative"
+        text_sentiment = "negative"
     else:
-        sentiment = "neutral"
+        text_sentiment = "neutral"
+    
+    # If rating is provided, use it to determine or override sentiment
+    if rating is not None:
+        # Define rating thresholds
+        # For a 5-star rating system: 1-2 = negative, 3 = neutral, 4-5 = positive
+        if rating <= 2:  # Low rating
+            rating_sentiment = "negative"
+        elif rating == 3:  # Middle rating
+            rating_sentiment = "neutral"
+        else:  # High rating
+            rating_sentiment = "positive"
+        
+        # If text sentiment conflicts with rating-based sentiment, use a weighted approach
+        if text_sentiment != rating_sentiment:
+            print(f"Sentiment conflict - Text: {text_sentiment}, Rating: {rating_sentiment}")
+            
+            # Prioritize rating over text analysis for final sentiment
+            final_sentiment = rating_sentiment
+        else:
+            # Both agree, use either
+            final_sentiment = rating_sentiment
+    else:
+        # No rating provided, use text-based sentiment
+        final_sentiment = text_sentiment
     
     # Very simple topic extraction based on common business aspects
     topics = []
@@ -126,9 +172,9 @@ def analyze_local(text: str) -> Dict[str, Any]:
     # Limit to 5 topics
     topics = topics[:5]
     
-    print(f"Local analysis result: sentiment={sentiment}, topics={topics}")
+    print(f"Local analysis result: sentiment={final_sentiment}, topics={topics}")
     
     return {
-        "sentiment": sentiment,
+        "sentiment": final_sentiment,
         "topics": topics
     }
