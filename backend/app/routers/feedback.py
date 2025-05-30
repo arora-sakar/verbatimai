@@ -12,6 +12,7 @@ import json
 from ..db.database import get_db
 from ..models.models import User, FeedbackItem
 from ..schemas.schemas import FeedbackCreate, FeedbackResponse
+from ..schemas.reanalyze import FeedbackFilterParams, ReanalyzeRequest
 from ..routers.auth import get_current_user
 from ..services.ai_service import analyze_feedback
 from ..core.config import settings
@@ -361,6 +362,83 @@ async def get_feedback_by_id(
         )
     
     return feedback
+
+@router.post("/reanalyze", response_model=dict)
+async def reanalyze_feedback(
+    request_data: ReanalyzeRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Re-analyze feedback items using the current sentiment analysis algorithm"""
+    # In a production system, you'd want to check for admin privileges here
+    # if not current_user.is_admin:
+    #     raise HTTPException(
+    #         status_code=status.HTTP_403_FORBIDDEN,
+    #         detail="Admin privileges required for this operation"
+    #     )
+    
+    # Build query based on filter params or specific IDs
+    query = db.query(FeedbackItem).filter(FeedbackItem.owner_id == current_user.id)
+    
+    if request_data.specific_ids:
+        # Process specific feedback items by ID
+        query = query.filter(FeedbackItem.id.in_(request_data.specific_ids))
+    elif request_data.filter_params:
+        # Apply filters if provided
+        filter_params = request_data.filter_params
+        if filter_params.sentiment:
+            query = query.filter(FeedbackItem.sentiment == filter_params.sentiment)
+        if filter_params.source:
+            query = query.filter(FeedbackItem.source == filter_params.source)
+        if filter_params.date_from:
+            query = query.filter(FeedbackItem.created_at >= filter_params.date_from)
+        if filter_params.date_to:
+            query = query.filter(FeedbackItem.created_at <= filter_params.date_to)
+    
+    # Get feedback items to re-analyze
+    items_to_process = query.all()
+    
+    # Process in batches to avoid overwhelming the system
+    batch_size = 50
+    total_items = len(items_to_process)
+    processed_count = 0
+    changed_count = 0
+    
+    print(f"Starting re-analysis of {total_items} feedback items")
+    
+    # Process items in batches
+    for i in range(0, total_items, batch_size):
+        batch = items_to_process[i:i+batch_size]
+        
+        for item in batch:
+            old_sentiment = item.sentiment
+            
+            # Re-analyze using current algorithm
+            try:
+                result = await analyze_feedback(item.feedback_text, item.rating)
+                item.sentiment = result.get("sentiment")
+                item.topics = result.get("topics", [])
+                item.processed_at = datetime.now()
+                
+                # Count items where sentiment changed
+                if old_sentiment != item.sentiment:
+                    changed_count += 1
+                    print(f"Sentiment changed for item {item.id}: {old_sentiment} -> {item.sentiment}")
+                
+                processed_count += 1
+            except Exception as e:
+                print(f"Error re-analyzing feedback item {item.id}: {str(e)}")
+        
+        # Commit changes for this batch
+        db.commit()
+        print(f"Processed batch: {i}-{min(i+batch_size, total_items)} of {total_items}")
+    
+    return {
+        "status": "success",
+        "processed": processed_count,
+        "changed": changed_count,
+        "total": total_items
+    }
 
 # Helper functions
 async def check_usage_limits(db: Session, user: User) -> bool:
