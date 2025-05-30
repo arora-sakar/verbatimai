@@ -1,9 +1,14 @@
 import { useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { useMutation } from 'react-query';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { useQueryInvalidation } from '../hooks/useQueryInvalidation';
 
 const UploadFeedback = () => {
+  const navigate = useNavigate();
+  const { invalidateDashboard } = useQueryInvalidation();
+  
   const [uploadStatus, setUploadStatus] = useState({
     status: null, // 'success', 'error', 'loading'
     message: '',
@@ -34,6 +39,16 @@ const UploadFeedback = () => {
           message: 'CSV uploaded successfully!',
           details: data.data,
         });
+        
+        // Invalidate all dashboard-related queries to force a refresh
+        invalidateDashboard();
+        
+        // Add a button to navigate to dashboard in the success message
+        setTimeout(() => {
+          if (confirm('CSV uploaded successfully! Would you like to view the dashboard now?')) {
+            navigate('/dashboard');
+          }
+        }, 500);
       },
       onError: (error) => {
         setUploadStatus({
@@ -61,6 +76,9 @@ const UploadFeedback = () => {
           source: 'Manual Entry',
           rating: '',
         });
+        
+        // Invalidate all dashboard-related queries to force a refresh
+        invalidateDashboard();
       },
       onError: (error) => {
         setUploadStatus({

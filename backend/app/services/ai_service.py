@@ -84,6 +84,8 @@ def analyze_local(text: str) -> Dict[str, Any]:
     Simple rule-based sentiment and topic analysis
     This is a very basic implementation for fallback purposes
     """
+    print(f"Using local analysis for text: '{text[:50]}...'")
+    
     # Simple sentiment analysis based on keyword matching
     positive_words = ["good", "great", "excellent", "awesome", "love", "happy", "satisfied", "recommend"]
     negative_words = ["bad", "poor", "terrible", "awful", "hate", "disappointed", "dissatisfied", "problem", "issue"]
@@ -93,6 +95,9 @@ def analyze_local(text: str) -> Dict[str, Any]:
     # Count positive and negative words
     positive_count = sum(1 for word in positive_words if word in text_lower)
     negative_count = sum(1 for word in negative_words if word in text_lower)
+    
+    # Log word counts
+    print(f"Positive words: {positive_count}, Negative words: {negative_count}")
     
     # Determine sentiment
     if positive_count > negative_count:
@@ -116,9 +121,12 @@ def analyze_local(text: str) -> Dict[str, Any]:
     for topic, keywords in topic_keywords.items():
         if any(keyword in text_lower for keyword in keywords):
             topics.append(topic)
+            print(f"Found topic: {topic}")
     
     # Limit to 5 topics
     topics = topics[:5]
+    
+    print(f"Local analysis result: sentiment={sentiment}, topics={topics}")
     
     return {
         "sentiment": sentiment,

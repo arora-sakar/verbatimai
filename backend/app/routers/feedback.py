@@ -83,6 +83,7 @@ async def upload_csv_feedback(
         # Process each row
         created_count = 0
         failed_count = 0
+        new_feedback_items = []  # Keep track of created feedback items
         
         for _, row in df.iterrows():
             # Check usage limits
@@ -99,6 +100,7 @@ async def upload_csv_feedback(
                 
                 new_feedback = FeedbackItem(**feedback_data)
                 db.add(new_feedback)
+                new_feedback_items.append(new_feedback)  # Add to our tracking list
                 created_count += 1
             except Exception:
                 failed_count += 1
@@ -107,7 +109,13 @@ async def upload_csv_feedback(
         db.commit()
         
         # Process all feedback asynchronously
-        # In a real implementation, this would be done by a background worker
+        print(f"Analyzing {len(new_feedback_items)} feedback items...")
+        for feedback_item in new_feedback_items:
+            try:
+                await analyze_and_update_feedback(db, feedback_item)
+                print(f"Analyzed feedback item {feedback_item.id}: {feedback_item.sentiment}")
+            except Exception as e:
+                print(f"Error analyzing feedback item: {str(e)}")
         
         return {
             "status": "success",
@@ -204,8 +212,11 @@ async def check_usage_limits(db: Session, user: User) -> bool:
 async def analyze_and_update_feedback(db: Session, feedback: FeedbackItem):
     """Analyze feedback using AI service and update the database"""
     try:
+        print(f"Starting analysis for feedback: '{feedback.feedback_text[:50]}...'")
+        
         # Call AI service to analyze feedback
         result = await analyze_feedback(feedback.feedback_text)
+        print(f"Analysis result: {result}")
         
         # Update feedback with analysis results
         feedback.sentiment = result.get("sentiment")
@@ -213,6 +224,7 @@ async def analyze_and_update_feedback(db: Session, feedback: FeedbackItem):
         feedback.processed_at = datetime.now()
         
         db.commit()
+        print(f"Updated feedback item {feedback.id} with sentiment: {feedback.sentiment}, topics: {feedback.topics}")
     except Exception as e:
         print(f"Error analyzing feedback: {str(e)}")
         # In a real app, you'd want better error handling and retry logic
