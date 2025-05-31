@@ -39,8 +39,11 @@ async def analyze_feedback(text: str, rating: int = None) -> Dict[str, Any]:
 
 async def analyze_with_claude(text: str) -> Dict[str, Any]:
     """Analyze feedback using Claude API"""
-    # In a real implementation, you would call the Claude API
-    # For now, we'll just simulate the response
+    
+    # Check if API key is configured
+    if not settings.AI_API_KEY or settings.AI_API_KEY == "":
+        print("Warning: No Claude API key configured, falling back to local analysis")
+        return analyze_local(text)
     
     try:
         async with httpx.AsyncClient() as client:

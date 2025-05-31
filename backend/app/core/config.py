@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     # AI Service settings
     AI_SERVICE_TYPE: str = os.getenv("AI_SERVICE_TYPE", "claude")  # claude, openai, local
     AI_API_KEY: str = os.getenv("AI_API_KEY", "")
-    AI_MODEL_NAME: str = os.getenv("AI_MODEL_NAME", "claude-3-haiku-20240307")
+    AI_MODEL_NAME: str = os.getenv("AI_MODEL_NAME", "claude-3-5-sonnet-20241022")
     
     # File upload settings
     MAX_UPLOAD_SIZE: int = 5 * 1024 * 1024  # 5MB
