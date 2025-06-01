@@ -98,11 +98,37 @@ yarn dev
 
 The frontend application will be available at http://localhost:3000.
 
+## Testing
+
+The project includes a comprehensive testing framework covering both backend and frontend:
+
+### Running Tests
+
+```bash
+# Setup testing framework (first time only)
+chmod +x setup_testing.sh
+./setup_testing.sh
+
+# Run all tests
+./run_tests.sh
+
+# Run backend tests only
+cd backend && ./run_tests.sh
+
+# Run frontend tests only
+cd frontend && ./run_tests.sh
+```
+
+### Test Coverage
+- Backend: Unit and integration tests with 70%+ coverage
+- Frontend: Component and page tests
+- See `TESTING_FRAMEWORK.md` for detailed documentation
+
 ## Development Roadmap
 
 The project is being developed in sprints, following the roadmap:
 
-1. **Sprint 1**: Core Authentication & CSV Upload
+1. **Sprint 1**: Core Authentication & CSV Upload ✅ 75% Complete
 2. **Sprint 2**: AI Analysis & Basic Dashboard
 3. **Sprint 3**: Advanced Dashboard & Filtering
 4. **Sprint 4**: GMB Integration & Web Widget

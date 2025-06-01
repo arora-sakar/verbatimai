@@ -89,9 +89,12 @@ const FeedbackList = () => {
       <div className="bg-white shadow-sm rounded-lg overflow-hidden">
         {isLoading ? (
           <div className="flex justify-center items-center p-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-600"></div>
+            <div 
+              data-testid="loading-spinner"
+              className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary-600"
+            ></div>
           </div>
-        ) : feedbackResponse && feedbackResponse.length > 0 ? (
+        ) : feedbackResponse && Array.isArray(feedbackResponse) && feedbackResponse.length > 0 ? (
           <div>
             <ul className="divide-y divide-gray-200">
               {feedbackResponse.map((item) => (

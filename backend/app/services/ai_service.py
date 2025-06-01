@@ -7,18 +7,22 @@ async def analyze_feedback(text: str, rating: int = None) -> Dict[str, Any]:
     Analyze feedback text to extract sentiment and topics
     This implementation can use both text analysis and rating for sentiment determination
     """
-    if settings.AI_SERVICE_TYPE == "claude":
-        result = await analyze_with_claude(text)
-    elif settings.AI_SERVICE_TYPE == "openai":
-        result = await analyze_with_openai(text)
-    else:
-        # Fallback to simple rule-based analysis
+    try:
+        if settings.AI_SERVICE_TYPE == "claude":
+            result = await analyze_with_claude(text)
+        elif settings.AI_SERVICE_TYPE == "openai":
+            result = await analyze_with_openai(text)
+        else:
+            # Fallback to simple rule-based analysis
+            result = analyze_local(text, rating)
+    except Exception as e:
+        print(f"Error in AI analysis, falling back to local: {str(e)}")
         result = analyze_local(text, rating)
     
     # If rating is provided, we can further adjust the sentiment
     # Note: We do this here as a fallback only if it wasn't already handled
     # by the analyze_local function
-    if rating is not None and "claude" in settings.AI_SERVICE_TYPE or "openai" in settings.AI_SERVICE_TYPE:
+    if rating is not None and ("claude" in settings.AI_SERVICE_TYPE or "openai" in settings.AI_SERVICE_TYPE):
         # Define rating thresholds
         # For a 5-star rating system: 1-2 = negative, 3 = neutral, 4-5 = positive
         if rating <= 2:  # Low rating

@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Text, DateTime, ARRAY
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Text, DateTime, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from ..db.database import Base
@@ -25,7 +25,7 @@ class FeedbackItem(Base):
     source = Column(String, nullable=False)  # 'csv', 'gmb', 'web_widget'
     rating = Column(Integer, nullable=True)  # 1-5 star rating if available
     sentiment = Column(String, nullable=True)  # 'positive', 'negative', 'neutral'
-    topics = Column(ARRAY(String), nullable=True)  # Array of extracted topics
+    topics = Column(JSON, nullable=True)  # Array of extracted topics stored as JSON
     customer_name = Column(String, nullable=True)
     customer_email = Column(String, nullable=True)
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)

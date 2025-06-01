@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, validator
+from pydantic import BaseModel, EmailStr, field_validator, ConfigDict
 from typing import List, Optional
 from datetime import datetime
 
@@ -8,7 +8,8 @@ class UserCreate(BaseModel):
     password: str
     business_name: str
     
-    @validator('password')
+    @field_validator('password')
+    @classmethod
     def password_strength(cls, v):
         if len(v) < 8:
             raise ValueError('Password must be at least 8 characters')
@@ -24,8 +25,7 @@ class UserResponse(BaseModel):
     business_name: str
     created_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class Token(BaseModel):
     access_token: str
@@ -51,8 +51,7 @@ class FeedbackResponse(BaseModel):
     topics: Optional[List[str]] = None
     created_at: datetime
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # Analytics schemas
 class SentimentSummary(BaseModel):
