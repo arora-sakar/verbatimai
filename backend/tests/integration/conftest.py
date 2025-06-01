@@ -61,7 +61,7 @@ def test_user(db_session):
     
     user = User(
         email="test@example.com",
-        hashed_password=get_password_hash("testpassword123"),
+        hashed_password=get_password_hash("TestPassword123"),
         business_name="Test Business"
     )
     db_session.add(user)
@@ -74,7 +74,7 @@ def auth_headers(client, test_user):
     """Get authentication headers for test user"""
     response = client.post(
         "/api/auth/login/json",
-        json={"email": "test@example.com", "password": "testpassword123"}
+        json={"email": "test@example.com", "password": "TestPassword123"}
     )
     token = response.json()["token"]
     return {"Authorization": f"Bearer {token}"}

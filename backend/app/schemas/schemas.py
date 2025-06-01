@@ -11,8 +11,19 @@ class UserCreate(BaseModel):
     @field_validator('password')
     @classmethod
     def password_strength(cls, v):
+        errors = []
         if len(v) < 8:
-            raise ValueError('Password must be at least 8 characters')
+            errors.append('at least 8 characters')
+        if not any(c.isupper() for c in v):
+            errors.append('one uppercase letter')
+        if not any(c.islower() for c in v):
+            errors.append('one lowercase letter')
+        if not any(c.isdigit() for c in v):
+            errors.append('one number')
+        
+        if errors:
+            error_message = ', '.join(errors)
+            raise ValueError(f'Password must contain {error_message}')
         return v
 
 class UserLogin(BaseModel):
@@ -33,6 +44,32 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     user_id: Optional[int] = None
+
+# Password Reset schemas
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+class PasswordReset(BaseModel):
+    token: str
+    new_password: str
+    
+    @field_validator('new_password')
+    @classmethod
+    def password_strength(cls, v):
+        errors = []
+        if len(v) < 8:
+            errors.append('at least 8 characters')
+        if not any(c.isupper() for c in v):
+            errors.append('one uppercase letter')
+        if not any(c.islower() for c in v):
+            errors.append('one lowercase letter')
+        if not any(c.isdigit() for c in v):
+            errors.append('one number')
+        
+        if errors:
+            error_message = ', '.join(errors)
+            raise ValueError(f'Password must contain {error_message}')
+        return v
 
 # Feedback schemas
 class FeedbackCreate(BaseModel):

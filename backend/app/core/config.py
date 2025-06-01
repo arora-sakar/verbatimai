@@ -46,6 +46,12 @@ class Settings(BaseSettings):
     # Free tier limits
     FREE_TIER_FEEDBACK_LIMIT: int = 100
     
+    # Email settings (for password reset)
+    EMAIL_USERNAME: str = os.getenv("EMAIL_USERNAME", "")
+    EMAIL_PASSWORD: str = os.getenv("EMAIL_PASSWORD", "")
+    FROM_EMAIL: str = os.getenv("FROM_EMAIL", "noreply@smbfeedback.com")
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    
     model_config = ConfigDict(
         env_file=".env",
         case_sensitive=True

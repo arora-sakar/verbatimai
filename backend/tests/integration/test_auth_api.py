@@ -6,7 +6,7 @@ class TestUserRegistration:
         """Test successful user registration"""
         user_data = {
             "email": "newuser@example.com",
-            "password": "securepassword123",
+            "password": "SecurePassword123",
             "business_name": "New Business"
         }
         
@@ -22,7 +22,7 @@ class TestUserRegistration:
         """Test registration with existing email"""
         user_data = {
             "email": "test@example.com",  # Same as test_user
-            "password": "anotherpassword123",
+            "password": "AnotherPassword123",
             "business_name": "Another Business"
         }
         
@@ -35,7 +35,7 @@ class TestUserRegistration:
         """Test registration with invalid email"""
         user_data = {
             "email": "not-an-email",
-            "password": "securepassword123",
+            "password": "SecurePassword123",
             "business_name": "Test Business"
         }
         
@@ -48,7 +48,7 @@ class TestUserLogin:
         """Test successful login"""
         login_data = {
             "email": "test@example.com",
-            "password": "testpassword123"
+            "password": "TestPassword123"
         }
         
         response = client.post("/api/auth/login/json", json=login_data)

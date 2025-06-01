@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 
 const Login = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { login } = useAuthStore()
   
   const [formData, setFormData] = useState({
@@ -11,7 +12,17 @@ const Login = () => {
     password: '',
   })
   const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  
+  // Check for success message from password reset
+  useEffect(() => {
+    if (location.state?.message) {
+      setSuccessMessage(location.state.message)
+      // Clear the message from location state
+      window.history.replaceState({}, document.title)
+    }
+  }, [location])
   
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -24,6 +35,7 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    setSuccessMessage('')
     setIsLoading(true)
     
     try {
@@ -56,6 +68,21 @@ const Login = () => {
             </Link>
           </p>
         </div>
+        
+        {successMessage && (
+          <div className="bg-green-50 border-l-4 border-green-400 p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-green-700">{successMessage}</p>
+              </div>
+            </div>
+          </div>
+        )}
         
         {error && (
           <div className="bg-red-50 border-l-4 border-red-400 p-4">
@@ -111,6 +138,17 @@ const Login = () => {
             >
               {isLoading ? 'Signing in...' : 'Sign in'}
             </button>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <div className="text-sm">
+              <Link 
+                to="/forgot-password" 
+                className="font-medium text-primary-600 hover:text-primary-500 transition-colors duration-200"
+              >
+                Forgot your password?
+              </Link>
+            </div>
           </div>
         </form>
       </div>

@@ -63,7 +63,7 @@ print_info "Pytest Version: $(python -m pytest --version)"
 echo ""
 
 # Step 1: Environment Setup
-print_step "1" "Environment Setup"
+print_step "1" "Environment Setup and Cleanup"
 
 # Check if virtual environment is activated
 if [[ "$VIRTUAL_ENV" != *"smb-feedback-insights"* ]]; then
@@ -78,10 +78,10 @@ if [ -f "$TEST_DB" ]; then
 fi
 
 # Install dependencies if needed
-print_info "Ensuring pyarrow is installed..."
+print_info "Ensuring required dependencies are installed..."
 pip install pyarrow==15.0.0 --quiet
 
-print_success "Environment setup complete"
+print_success "Environment setup and cleanup complete"
 echo ""
 
 # Step 2: Unit Tests
@@ -133,7 +133,8 @@ echo -e "${BLUE}Running all tests with coverage analysis...${NC}"
 echo "This may take a moment..."
 
 # Run all tests with coverage
-if python -m pytest tests/ \
+if python -m pytest \
+    tests/ \
     --cov=app \
     --cov-report=term-missing \
     --cov-report=html:htmlcov \
