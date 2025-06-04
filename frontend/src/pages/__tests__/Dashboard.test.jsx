@@ -116,7 +116,7 @@ describe('Dashboard Component', () => {
     renderWithProviders(<Dashboard />)
     
     await waitFor(() => {
-      expect(screen.getByText(/welcome to smb feedback insights/i)).toBeInTheDocument()
+      expect(screen.getByText(/welcome to verbatimai/i)).toBeInTheDocument()
       expect(screen.getByText(/upload feedback/i)).toBeInTheDocument()
     })
   })
@@ -168,7 +168,7 @@ describe('Dashboard Component', () => {
     await waitFor(() => {
       expect(screen.getByText('Dashboard')).toBeInTheDocument()
       // Should show welcome message when there's an error
-      expect(screen.getByText(/welcome to smb feedback insights/i)).toBeInTheDocument()
+      expect(screen.getByText(/welcome to verbatimai/i)).toBeInTheDocument()
     })
   })
 

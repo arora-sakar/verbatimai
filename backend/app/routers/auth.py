@@ -217,7 +217,7 @@ def generate_password_reset_email_template(email: str, token: str) -> str:
             </div>
             <div class="content">
                 <p>Hi there,</p>
-                <p>You recently requested to reset your password for your SMB Feedback Insights account ({email}).</p>
+                <p>You recently requested to reset your password for your VerbatimAI account ({email}).</p>
                 <p>To reset your password, please click the button below:</p>
                 <p style="text-align: center;">
                     <a href="{reset_url}" class="button">Reset Your Password</a>
@@ -226,7 +226,7 @@ def generate_password_reset_email_template(email: str, token: str) -> str:
                 <p style="word-break: break-all;">{reset_url}</p>
                 <p><strong>This link will expire in 1 hour for security reasons.</strong></p>
                 <p>If you didn't request this password reset, please ignore this email. Your password will remain unchanged.</p>
-                <p>Best regards,<br>The SMB Feedback Insights Team</p>
+                <p>Best regards,<br>The VerbatimAI Team</p>
             </div>
             <div class="footer">
                 <p>This is an automated email. Please do not reply to this email.</p>

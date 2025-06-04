@@ -1,6 +1,6 @@
-# SMB Feedback Insights - Backend
+# VerbatimAI - Backend
 
-This is the backend API for the SMB Feedback Insights project, built with FastAPI, SQLAlchemy, and PostgreSQL.
+This is the backend API for the VerbatimAI project, built with FastAPI, SQLAlchemy, and PostgreSQL.
 
 ## Features
 

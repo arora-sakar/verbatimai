@@ -1,6 +1,6 @@
-# SMB Feedback Insights - Frontend
+# VerbatimAI - Frontend
 
-This is the frontend application for the SMB Feedback Insights project, built with React, Vite, and Tailwind CSS.
+This is the frontend application for the VerbatimAI project, built with React, Vite, and Tailwind CSS.
 
 ## Features
 

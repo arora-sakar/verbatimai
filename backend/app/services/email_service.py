@@ -24,7 +24,7 @@ class EmailService:
         self.smtp_port = 587
         self.username = settings.EMAIL_USERNAME if hasattr(settings, 'EMAIL_USERNAME') else ""
         self.password = settings.EMAIL_PASSWORD if hasattr(settings, 'EMAIL_PASSWORD') else ""
-        self.from_email = settings.FROM_EMAIL if hasattr(settings, 'FROM_EMAIL') else "noreply@smbfeedback.com"
+        self.from_email = settings.FROM_EMAIL if hasattr(settings, 'FROM_EMAIL') else "noreply@verbatimai.com"
     
     def send_email(self, to_email: str, subject: str, html_content: str, text_content: Optional[str] = None) -> bool:
         """

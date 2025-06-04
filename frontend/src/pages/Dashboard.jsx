@@ -115,7 +115,7 @@ const Dashboard = () => {
       {/* No data state */}
       {!analyticsData?.sentiment?.total && (
         <div className="bg-white p-6 rounded-lg shadow-sm">
-          <h2 className="text-xl font-semibold mb-4">Welcome to SMB Feedback Insights!</h2>
+          <h2 className="text-xl font-semibold mb-4">Welcome to VerbatimAI!</h2>
           <p className="text-gray-600 mb-4">
             Start by uploading your customer feedback to gain valuable insights.
           </p>

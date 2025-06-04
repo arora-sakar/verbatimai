@@ -9,7 +9,7 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=smb_feedback
+      - POSTGRES_DB=verbatimai
     ports:
       - "5432:5432"
     healthcheck:
@@ -27,7 +27,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/smb_feedback
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/verbatimai
       - SECRET_KEY=dev_secret_key_change_in_production
       - ACCESS_TOKEN_EXPIRE_MINUTES=10080
       - AI_SERVICE_TYPE=local

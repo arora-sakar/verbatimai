@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
-    title="SMB Feedback Insights API",
+    title="VerbatimAI API",
     description="API for analyzing and managing small business customer feedback",
     version="0.1.0",
     # Disable automatic redirect for trailing slashes

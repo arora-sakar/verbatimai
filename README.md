@@ -1,4 +1,4 @@
-# SMB Feedback Insights
+# VerbatimAI
 
 A comprehensive feedback analysis tool for small businesses, providing AI-powered sentiment analysis and topic extraction to help business owners make data-driven decisions based on customer feedback.
 

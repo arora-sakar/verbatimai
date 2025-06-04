@@ -9,7 +9,7 @@ load_dotenv()
 
 class Settings(BaseSettings):
     # App settings
-    PROJECT_NAME: str = "SMB Feedback Insights"
+    PROJECT_NAME: str = "VerbatimAI"
     API_V1_STR: str = "/api"
     APP_ENV: str = os.getenv("APP_ENV", "development")
     DEBUG: bool = os.getenv("DEBUG", "True").lower() == "true"
@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     # Database settings
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL", 
-        "postgresql://sakar@localhost:5432/smb_feedback"
+        "postgresql://sakar@localhost:5432/verbatimai"
     )
     
     # CORS settings
@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     # Email settings (for password reset)
     EMAIL_USERNAME: str = os.getenv("EMAIL_USERNAME", "")
     EMAIL_PASSWORD: str = os.getenv("EMAIL_PASSWORD", "")
-    FROM_EMAIL: str = os.getenv("FROM_EMAIL", "noreply@smbfeedback.com")
+    FROM_EMAIL: str = os.getenv("FROM_EMAIL", "noreply@verbatimai.com")
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
     
     model_config = ConfigDict(
