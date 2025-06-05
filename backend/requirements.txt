@@ -19,3 +19,6 @@ pytest-asyncio==0.23.4
 pytest-cov==4.1.0
 asyncpg==0.29.0
 email-validator==2.1.0
+# Additional dependencies for Universal Review Importer
+numpy==1.26.3
+scikit-learn==1.4.0

@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Text, DateTime, JSON
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Text, DateTime, ARRAY
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from ..db.database import Base
@@ -25,9 +25,12 @@ class FeedbackItem(Base):
     source = Column(String, nullable=False)  # 'csv', 'gmb', 'web_widget'
     rating = Column(Integer, nullable=True)  # 1-5 star rating if available
     sentiment = Column(String, nullable=True)  # 'positive', 'negative', 'neutral'
-    topics = Column(JSON, nullable=True)  # Array of extracted topics stored as JSON
+    topics = Column(ARRAY(String), nullable=True)  # Array of extracted topics stored as PostgreSQL array
     customer_name = Column(String, nullable=True)
     customer_email = Column(String, nullable=True)
+    date = Column(DateTime(timezone=True), nullable=True)  # Original review date
+    imported_via = Column(String, nullable=True)  # 'csv', 'universal_csv', 'web_widget'
+    original_platform = Column(String, nullable=True)  # 'google', 'yelp', 'facebook', etc.
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     processed_at = Column(DateTime(timezone=True), nullable=True)

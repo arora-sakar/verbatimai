@@ -86,6 +86,11 @@ class FeedbackResponse(BaseModel):
     rating: Optional[int] = None
     sentiment: Optional[str] = None
     topics: Optional[List[str]] = None
+    customer_name: Optional[str] = None
+    customer_email: Optional[str] = None
+    date: Optional[datetime] = None  # Original review date
+    imported_via: Optional[str] = None  # How it was imported
+    original_platform: Optional[str] = None  # Source platform
     created_at: datetime
     
     model_config = ConfigDict(from_attributes=True)

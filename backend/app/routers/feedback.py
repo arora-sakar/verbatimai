@@ -15,6 +15,7 @@ from ..schemas.schemas import FeedbackCreate, FeedbackResponse
 from ..schemas.reanalyze import FeedbackFilterParams, ReanalyzeRequest
 from ..routers.auth import get_current_user
 from ..services.ai_service import analyze_feedback
+from ..services.universal_review_importer import universal_importer
 from ..core.config import settings
 
 # Custom JSON encoder to handle datetime objects
@@ -71,6 +72,24 @@ async def create_feedback(
     
     return new_feedback
 
+@router.get("/supported-formats")
+async def get_supported_formats(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Return information about supported CSV formats and column mappings
+    """
+    try:
+        return universal_importer.get_supported_formats()
+    except Exception as e:
+        print(f"Error in get_supported_formats: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error retrieving supported formats: {str(e)}"
+        )
+
 @router.post("/upload-csv", response_model=dict, status_code=status.HTTP_201_CREATED)
 async def upload_csv_feedback(
     file: UploadFile = File(...),
@@ -79,7 +98,7 @@ async def upload_csv_feedback(
 ):
     """Upload and process CSV file with feedback"""
     # Check file size
-    if file.size > settings.MAX_UPLOAD_SIZE:
+    if file.size and file.size > settings.MAX_UPLOAD_SIZE:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail=f"File size exceeds the {settings.MAX_UPLOAD_SIZE / (1024 * 1024)}MB limit",
@@ -272,6 +291,8 @@ async def upload_csv_feedback(
             detail=detail
         )
 
+
+
 @router.get("/")
 async def get_feedback(
     skip: Optional[int] = Query(0, ge=0),
@@ -417,7 +438,15 @@ async def reanalyze_feedback(
             try:
                 result = await analyze_feedback(item.feedback_text, item.rating)
                 item.sentiment = result.get("sentiment")
-                item.topics = result.get("topics", [])
+                
+                # Ensure topics is a list for PostgreSQL ARRAY type
+                topics = result.get("topics", [])
+                if not isinstance(topics, list):
+                    # Convert any non-list type to list
+                    topics = [str(topics)] if topics else []
+                
+                # Ensure all items are strings and limit to 5 topics
+                item.topics = [str(topic) for topic in topics if topic][:5]
                 item.processed_at = datetime.now()
                 
                 # Count items where sentiment changed
@@ -463,11 +492,166 @@ async def analyze_and_update_feedback(db: Session, feedback: FeedbackItem):
         
         # Update feedback with analysis results
         feedback.sentiment = result.get("sentiment")
-        feedback.topics = result.get("topics", [])
+        
+        # Ensure topics is a list for PostgreSQL ARRAY type
+        topics = result.get("topics", [])
+        if not isinstance(topics, list):
+            # Convert any non-list type to list
+            topics = [str(topics)] if topics else []
+        
+        # Ensure all items are strings and limit to 5 topics
+        feedback.topics = [str(topic) for topic in topics if topic][:5]
         feedback.processed_at = datetime.now()
         
         db.commit()
         print(f"Updated feedback item {feedback.id} with sentiment: {feedback.sentiment}, topics: {feedback.topics}")
     except Exception as e:
         print(f"Error analyzing feedback: {str(e)}")
+        # Rollback the transaction on error
+        db.rollback()
         # In a real app, you'd want better error handling and retry logic
+
+@router.post("/upload-universal", response_model=dict, status_code=status.HTTP_201_CREATED)
+async def upload_universal_reviews(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Universal review uploader that accepts CSV exports from any platform
+    """
+    
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="File must be a CSV")
+    
+    # Check file size
+    if file.size and file.size > settings.MAX_UPLOAD_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File size exceeds the {settings.MAX_UPLOAD_SIZE / (1024 * 1024)}MB limit",
+        )
+    
+    try:
+        # Read CSV content
+        content = await file.read()
+        csv_content = content.decode('utf-8')
+        df = pd.read_csv(io.StringIO(csv_content))
+        
+        if df.empty:
+            raise HTTPException(status_code=400, detail="CSV file is empty")
+        
+        # Detect platform
+        platform = universal_importer.detect_platform(df.columns.tolist())
+        
+        # Map columns to universal format
+        mapped_df = universal_importer.map_columns(df, platform)
+        
+        # Validate and clean data
+        clean_df, validation_stats = universal_importer.validate_and_clean(mapped_df)
+        
+        if clean_df.empty:
+            raise HTTPException(
+                status_code=400, 
+                detail="No valid review data found after processing"
+            )
+        
+        # Convert to FeedbackItem records
+        feedback_items = []
+        for _, row in clean_df.iterrows():
+            # Check usage limits
+            if await check_usage_limits(db, current_user):
+                break
+                
+            # Create comprehensive feedback text
+            feedback_text = ""
+            if pd.notna(row.get('rating')):
+                feedback_text += f"Rating: {row['rating']}/5 stars. "
+            if row.get('comment'):
+                feedback_text += str(row['comment'])
+            
+            if not feedback_text.strip():
+                feedback_text = f"{row.get('rating', 'No')}/5 star rating (no comment)"
+            
+            feedback_item = FeedbackItem(
+                feedback_text=feedback_text,
+                source=row.get('source', platform.title()),
+                rating=row.get('rating') if pd.notna(row.get('rating')) else None,
+                customer_name=row.get('reviewer_name'),
+                date=row.get('date') if pd.notna(row.get('date')) else None,
+                imported_via='universal_csv',
+                original_platform=platform,
+                owner_id=current_user.id
+            )
+            
+            feedback_items.append(feedback_item)
+        
+        # Batch insert
+        db.add_all(feedback_items)
+        db.commit()
+        
+        # Trigger AI analysis for all items
+        analyzed_count = 0
+        for item in feedback_items:
+            try:
+                await analyze_and_update_feedback(db, item)
+                analyzed_count += 1
+            except Exception as e:
+                print(f"AI analysis failed for item {item.id}: {str(e)}")
+        
+        # Get source breakdown
+        source_breakdown = {}
+        for item in feedback_items:
+            source = item.source
+            source_breakdown[source] = source_breakdown.get(source, 0) + 1
+        
+        return {
+            "message": f"Successfully imported {len(feedback_items)} reviews",
+            "detected_platform": platform,
+            "imported_count": len(feedback_items),
+            "analyzed_count": analyzed_count,
+            "source_breakdown": source_breakdown,
+            "validation_stats": validation_stats
+        }
+        
+    except pd.errors.EmptyDataError:
+        raise HTTPException(status_code=400, detail="CSV file is empty or corrupted")
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=400, detail="Unable to decode CSV file. Please ensure it's UTF-8 encoded")
+    except Exception as e:
+        print(f"Universal CSV upload failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+
+
+@router.post("/validate-csv")
+async def validate_csv_format(file: UploadFile = File(...)):
+    """
+    Validate CSV format without importing (preview functionality)
+    """
+    # Check file size before processing
+    if file.size and file.size > settings.MAX_UPLOAD_SIZE:
+        return {
+            "valid": False,
+            "error": f"File size ({file.size / (1024 * 1024):.1f}MB) exceeds the {settings.MAX_UPLOAD_SIZE / (1024 * 1024)}MB limit",
+            "suggestions": [
+                f"Please reduce file size to under {settings.MAX_UPLOAD_SIZE / (1024 * 1024)}MB",
+                "Consider splitting large files into smaller chunks",
+                "Remove unnecessary columns or rows"
+            ]
+        }
+    
+    try:
+        content = await file.read()
+        csv_content = content.decode('utf-8')
+        return universal_importer.preview_csv(csv_content)
+        
+    except Exception as e:
+        return {
+            "valid": False,
+            "error": str(e),
+            "suggestions": [
+                "Ensure file is a valid CSV",
+                "Check that required columns exist",
+                "Verify data format matches expected types"
+            ]
+        }
