@@ -4,21 +4,28 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import os
 
-# Environment is already set in main conftest.py, but let's be explicit here
+# Use PostgreSQL for integration tests to match production environment
+# This ensures tests run against the same database type as production
 os.environ["AI_SERVICE_TYPE"] = "local"
-os.environ["DATABASE_URL"] = "sqlite:///./test.db"
 os.environ["SECRET_KEY"] = "test_secret_key_for_testing_only"
 os.environ["FREE_TIER_FEEDBACK_LIMIT"] = "10"
+
+# PostgreSQL test database configuration
+# Format: postgresql://username:password@host:port/database_name
+TEST_DATABASE_URL = os.getenv(
+    "TEST_DATABASE_URL",
+    "postgresql://localhost:5432/test_verbatimai"
+)
+
+# Override the main database URL for tests
+os.environ["DATABASE_URL"] = TEST_DATABASE_URL
 
 from app.main import app
 from app.db.database import get_db, Base
 from app.models.models import User, FeedbackItem
 
 # Create test database engine
-engine = create_engine(
-    "sqlite:///./test.db",
-    connect_args={"check_same_thread": False}
-)
+engine = create_engine(TEST_DATABASE_URL)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 @pytest.fixture(scope="session")

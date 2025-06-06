@@ -84,22 +84,10 @@ class UniversalReviewImporter:
         # Platform indicators with confidence weights
         platform_indicators = {
             'amazon': {
-                # Unique Amazon identifiers (high confidence)
-                'review_body': 10,
-                'vine_customer_review': 10,
-                'verified_purchase': 10,
-                'marketplace': 10,
-                'product_id': 9,
-                'product_title': 8,
-                'product_category': 8,
-                'helpful_votes': 8,
-                'total_votes': 8,
-                'asin': 9,
-                
-                # Common Amazon terms (medium confidence)
-                'star_rating': 5,  # Higher weight for Amazon than Google
-                'reviewer_name': 3,
-                'review_date': 3,
+                'review_body': 10, 'vine_customer_review': 10, 'verified_purchase': 10,
+                'marketplace': 10, 'product_id': 9, 'product_title': 8,
+                'product_category': 8, 'helpful_votes': 8, 'total_votes': 8,
+                'asin': 9, 'star_rating': 5, 'reviewer_name': 3, 'review_date': 3,
             },
             
             'google': {
@@ -110,56 +98,27 @@ class UniversalReviewImporter:
                 'reviewer_profile_photo': 8,
                 'business_reply': 8,
                 'location_id': 9,
-                
-                # Common Google terms (medium confidence)
-                'star_rating': 3,  # Lower weight since shared with Amazon
-                'review_comment': 5,
-                'review_text': 3,
                 'create_time': 4,
+                # Generic terms REMOVED to prevent false positives
             },
             
             'yelp': {
-                # Unique Yelp identifiers (high confidence)
-                'business_id': 10,
-                'review_id': 9,
-                'user_id': 8,
-                'elite_year': 10,
-                'cool': 8,
-                'funny': 8,
-                'useful': 8,
-                
-                # Yelp-specific patterns (lower weights for common terms)
-                'rating': 3,
-                'text': 3,
-                'date': 2,
+                'business_id': 10, 'review_id': 9, 'user_id': 8,
+                'elite_year': 10, 'cool': 8, 'funny': 8,
+                'useful': 8, 'rating': 3, 'text': 3, 'date': 2,
             },
             
             'facebook': {
-                # Unique Facebook identifiers (high confidence)
-                'recommendation_type': 10,
-                'created_time': 9,
-                'from_name': 8,
-                'from_id': 8,
-                'page_id': 8,
-                'post_id': 7,
-                
-                # Facebook patterns
-                'message': 5,
-                'rating': 4,
+                'recommendation_type': 10, 'created_time': 9, 'from_name': 8,
+                'from_id': 8, 'page_id': 8, 'post_id': 7,
+                'message': 5, 'rating': 3,
             },
             
             'tripadvisor': {
                 # Unique TripAdvisor identifiers (high confidence)
-                'visit_date': 10,
-                'trip_type': 9,
-                'traveler_type': 8,
-                'hotel_id': 8,
-                'location_id': 8,
-                
-                # TripAdvisor patterns
-                'rating': 5,
-                'review_text': 4,
-                'title': 4,
+                'visit_date': 10, 'trip_type': 9, 'traveler_type': 8,
+                'hotel_id': 8, 'location_id': 8, 'title': 4,
+                # Generic terms already removed
             }
         }
         
@@ -177,11 +136,11 @@ class UniversalReviewImporter:
                     matches.append(f"{indicator} (exact)")
                 # Partial match (substring)
                 elif any(indicator in col for col in columns_lower):
-                    score += weight * 0.7  # Reduced weight for partial matches
+                    score += weight * 0.7
                     matches.append(f"{indicator} (partial)")
                 # Check if column contains the indicator
                 elif any(col in indicator for col in columns_lower if len(col) > 3):
-                    score += weight * 0.5  # Further reduced for reverse matches
+                    score += weight * 0.5
                     matches.append(f"{indicator} (contains)")
             
             platform_scores[platform] = {
@@ -203,7 +162,7 @@ class UniversalReviewImporter:
         logger.info(f"Selected: {best_platform} (score: {best_score})")
         
         # Require minimum confidence threshold
-        if best_score < 3:
+        if best_score < 4:
             logger.info("No platform reached minimum confidence threshold, defaulting to generic")
             return 'generic'
         
@@ -247,7 +206,8 @@ class UniversalReviewImporter:
         else:
             mapped_data['source'] = platform.title()
 
-        return pd.DataFrame(mapped_data)
+        # Pass the original index to handle cases with only scalar values
+        return pd.DataFrame(mapped_data, index=df.index)
 
     def _find_column(self, columns_dict: Dict[str, str], possible_names: List[str]) -> Optional[str]:
         """Find matching column name from possible variations"""
@@ -261,30 +221,43 @@ class UniversalReviewImporter:
         """Normalize ratings to 1-5 scale"""
         # Handle different rating scales
         ratings_numeric = pd.to_numeric(ratings, errors='coerce')
+        
+        # Return a series of the correct nullable integer type if all values are NaN
+        if ratings_numeric.isna().all():
+            return ratings_numeric.astype('Int64')
+
         max_rating = ratings_numeric.max()
         min_rating = ratings_numeric.min()
 
         if pd.isna(max_rating):
-            return ratings_numeric  # All NaN values
+            return ratings_numeric.astype('Int64')  # All NaN values
+        
+        normalized_ratings = None
 
         # If already in 1-5 range
         if max_rating <= 5 and min_rating >= 1:
-            return ratings_numeric.round()
+            normalized_ratings = ratings_numeric.round()
         elif max_rating <= 10:
             # Convert 10-point to 5-point scale
-            return ((ratings_numeric / 2).round()).clip(1, 5)
+            normalized_ratings = ((ratings_numeric / 2).round()).clip(1, 5)
         elif max_rating <= 100:
             # Convert 100-point to 5-point scale
-            return ((ratings_numeric / 20).round()).clip(1, 5)
+            normalized_ratings = ((ratings_numeric / 20).round()).clip(1, 5)
         else:
             # Keep as-is if unclear, but clip to reasonable range
-            return ratings_numeric.clip(1, 5)
+            normalized_ratings = ratings_numeric.clip(1, 5)
+            
+        # If there are no NaN values after normalization, convert to standard int64
+        if not normalized_ratings.isna().any():
+            return normalized_ratings.astype('int64')
+        else:
+            return normalized_ratings.astype('Int64')
 
     def _parse_dates(self, dates: pd.Series) -> pd.Series:
         """Parse various date formats"""
         try:
-            # Try standard pandas date parsing first
-            parsed_dates = pd.to_datetime(dates, errors='coerce')
+            # Use format='mixed' to handle multiple date formats without issuing a warning
+            parsed_dates = pd.to_datetime(dates, format='mixed', errors='coerce')
 
             # If many dates failed to parse, try alternative formats
             failed_count = parsed_dates.isna().sum()
@@ -327,25 +300,37 @@ class UniversalReviewImporter:
 
         # Remove rows with no comment and no rating
         before_count = len(df)
-        df = df.dropna(subset=['comment', 'rating'], how='all')
+        df = df.dropna(subset=['comment', 'rating'], how='all').copy() # Use .copy() to signal intent
         if len(df) < before_count:
             validation_stats['issues'].append(f"Removed {before_count - len(df)} rows with no comment or rating")
 
         # Clean comment text
         if 'comment' in df.columns:
-            df['comment'] = df['comment'].fillna('')
-            df['comment'] = df['comment'].astype(str).str.strip()
+            # Using .loc for assignment to avoid SettingWithCopyWarning
+            df.loc[:, 'comment'] = df['comment'].fillna('')
+            df.loc[:, 'comment'] = df['comment'].astype(str).str.strip()
             # Remove empty comments if no rating exists
             before_count = len(df)
             df = df[~((df['comment'] == '') & (pd.isna(df.get('rating'))))]
             if len(df) < before_count:
                 validation_stats['issues'].append(f"Removed {before_count - len(df)} rows with empty comments and no rating")
 
-        # Validate ratings
+        # Validate ratings - Stricter logic
         if 'rating' in df.columns:
             before_count = len(df)
+            
+            # Keep original strings to identify what was invalid vs. what was just empty.
+            # Fill NaN with '' before converting to string to avoid 'nan' string.
+            original_ratings = df['rating'].fillna('').astype(str).str.strip()
             df['rating'] = pd.to_numeric(df['rating'], errors='coerce')
+            
+            # A rating is invalid if it became NaN AND the original string was not empty.
+            invalid_text_ratings = df['rating'].isna() & (original_ratings != '')
+            
+            # Remove rows with invalid rating text, then filter for the 1-5 range
+            df = df[~invalid_text_ratings]
             df = df[df['rating'].isna() | df['rating'].between(1, 5)]
+
             if len(df) < before_count:
                 validation_stats['issues'].append(f"Removed {before_count - len(df)} rows with invalid ratings")
 

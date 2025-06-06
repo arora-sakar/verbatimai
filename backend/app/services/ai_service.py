@@ -185,7 +185,7 @@ async def analyze_with_openai(text: str, rating: int = None) -> Dict[str, Any]:
     Analyze feedback using OpenAI API with comprehensive error handling
     """
     # Check if API key is configured
-    if not hasattr(settings, 'OPENAI_API_KEY') or not settings.OPENAI_API_KEY or settings.OPENAI_API_KEY.strip() == "":
+    if not settings.AI_API_KEY or settings.AI_API_KEY.strip() == "":
         logger.warning("No OpenAI API key configured, falling back to local analysis")
         raise ValueError("OpenAI API key not configured")
     
@@ -204,7 +204,7 @@ async def analyze_with_openai(text: str, rating: int = None) -> Dict[str, Any]:
             response = await client.post(
                 "https://api.openai.com/v1/chat/completions",
                 headers={
-                    "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
+                    "Authorization": f"Bearer {settings.AI_API_KEY}",
                     "Content-Type": "application/json",
                 },
                 json={
