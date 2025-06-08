@@ -1,6 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { BrowserRouter } from 'react-router-dom'
 import TopTopics from '../dashboard/TopTopics'
+
+// Helper to render component with Router context
+const renderWithRouter = (component) => {
+  return render(
+    <BrowserRouter>
+      {component}
+    </BrowserRouter>
+  )
+}
 
 describe('TopTopics Component', () => {
   const mockPositiveTopics = [
@@ -19,32 +29,32 @@ describe('TopTopics Component', () => {
   })
 
   it('renders without crashing', () => {
-    render(<TopTopics positiveTopics={mockPositiveTopics} negativeTopics={mockNegativeTopics} />)
+    renderWithRouter(<TopTopics positiveTopics={mockPositiveTopics} negativeTopics={mockNegativeTopics} />)
     expect(screen.getByText('Top Positive Topics')).toBeInTheDocument()
     expect(screen.getByText('Top Negative Topics')).toBeInTheDocument()
   })
 
   it('displays positive topics correctly', () => {
-    render(<TopTopics positiveTopics={mockPositiveTopics} negativeTopics={[]} />)
+    renderWithRouter(<TopTopics positiveTopics={mockPositiveTopics} negativeTopics={[]} />)
     
     expect(screen.getByText('product quality')).toBeInTheDocument()
     expect(screen.getByText('15')).toBeInTheDocument()
   })
 
   it('displays negative topics correctly', () => {
-    render(<TopTopics positiveTopics={[]} negativeTopics={mockNegativeTopics} />)
+    renderWithRouter(<TopTopics positiveTopics={[]} negativeTopics={mockNegativeTopics} />)
     
     expect(screen.getByText('slow delivery')).toBeInTheDocument()
     expect(screen.getByText('8')).toBeInTheDocument()
   })
 
   it('shows empty state when no topics available', () => {
-    render(<TopTopics positiveTopics={[]} negativeTopics={[]} />)
+    renderWithRouter(<TopTopics positiveTopics={[]} negativeTopics={[]} />)
     expect(screen.getByText('No topics found in feedback')).toBeInTheDocument()
   })
 
   it('handles undefined props gracefully', () => {
-    render(<TopTopics positiveTopics={undefined} negativeTopics={undefined} />)
+    renderWithRouter(<TopTopics positiveTopics={undefined} negativeTopics={undefined} />)
     expect(screen.getByText('No topics found in feedback')).toBeInTheDocument()
   })
 })
