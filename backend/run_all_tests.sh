@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# SMB Feedback Insights - Complete Test Suite Runner
-# ==================================================
+# VerbatimAI - Complete Test Suite Runner
+# ========================================
 # This script runs all tests (unit + integration) with comprehensive reporting
 
 set -e  # Exit on any error
@@ -15,8 +15,12 @@ PURPLE='\033[0;35m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
+# Dynamic path detection - works from any location
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BACKEND_DIR="$SCRIPT_DIR"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 # Configuration
-BACKEND_DIR="/Users/sakar/projects/smb-feedback-insights/backend"
 COVERAGE_THRESHOLD=70
 TEST_DB="test.db"
 
@@ -53,7 +57,7 @@ cd "$BACKEND_DIR" || {
     exit 1
 }
 
-print_header "SMB Feedback Insights - Complete Test Suite"
+print_header "VerbatimAI - Complete Test Suite"
 
 print_info "Backend Directory: $BACKEND_DIR"
 print_info "Coverage Threshold: ${COVERAGE_THRESHOLD}%"
@@ -66,7 +70,7 @@ echo ""
 print_step "1" "Environment Setup and Cleanup"
 
 # Check if virtual environment is activated
-if [[ "$VIRTUAL_ENV" != *"smb-feedback-insights"* ]]; then
+if [[ "$VIRTUAL_ENV" != *"verbatimai"* ]]; then
     print_warning "Virtual environment may not be activated"
     print_info "Current VIRTUAL_ENV: ${VIRTUAL_ENV:-'None'}"
 fi

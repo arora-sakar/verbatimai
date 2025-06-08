@@ -1,10 +1,32 @@
 #!/bin/bash
 
-# Test Shortcuts for SMB Feedback Insights
-# ========================================
+# Test Shortcuts for VerbatimAI
+# ==============================
 # Simple commands for common test operations
 
-cd /Users/sakar/projects/smb-feedback-insights/backend
+# Ensure we're in the correct directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# Check if virtual environment is activated
+if [[ -z "$VIRTUAL_ENV" ]]; then
+    echo "⚠️  No virtual environment detected!"
+    echo "Please activate your virtual environment first:"
+    echo "  source venv/bin/activate"
+    echo "Or run the setup script: ./setup_venv.sh"
+    exit 1
+fi
+
+# Check if pytest is available
+if ! command -v pytest &> /dev/null; then
+    echo "❌ pytest not found in current environment"
+    echo "Current Python: $(which python)"
+    echo "Virtual env: $VIRTUAL_ENV"
+    echo ""
+    echo "To fix this, run:"
+    echo "  pip install pytest pytest-cov"
+    exit 1
+fi
 
 case "$1" in
     "")

@@ -121,10 +121,129 @@ The following environment variables are used:
 
 ## Testing
 
-Run tests with pytest:
+### Quick Setup
+
+First-time setup (only needed once):
 
 ```bash
-pytest
+# Create and setup virtual environment with all dependencies
+./setup_venv.sh
+
+# Activate the virtual environment
+source venv/bin/activate
+```
+
+### Running Tests
+
+#### Simple Test Commands (Daily Use)
+
+```bash
+# Quick test shortcuts
+./test.sh                    # Show available commands
+./test.sh unit               # Run unit tests only
+./test.sh integration        # Run integration tests only
+./test.sh run                # Run all tests with coverage
+./test.sh coverage           # Run with detailed HTML coverage report
+./test.sh quick              # Fast test run with minimal output
+./test.sh clean              # Clean test artifacts
+```
+
+#### Advanced Test Commands
+
+```bash
+# Smart test runner with validation
+./test_smart.sh info         # Show project and environment info
+./test_smart.sh unit         # Unit tests with environment validation
+./test_smart.sh coverage     # Comprehensive coverage analysis
+./test_smart.sh clean        # Clean test artifacts
+```
+
+#### Comprehensive Test Suite
+
+```bash
+# Full test suite with detailed reporting (ideal for CI/CD)
+./run_all_tests.sh
+```
+
+### Test Structure
+
+```
+tests/
+├── unit/                    # Unit tests
+│   ├── services/           # Service layer tests
+│   ├── routers/            # API endpoint tests
+│   └── models/             # Model tests
+├── integration/            # Integration tests
+│   ├── test_auth_api.py    # Authentication integration
+│   └── test_feedback_api.py # Feedback API integration
+└── test_basic.py           # Basic functionality tests
+```
+
+### Test Configuration
+
+- **Coverage Threshold**: 70% minimum
+- **Test Database**: Uses PostgreSQL for integration tests (matches production)
+- **AI Service**: Uses local fallback during tests
+- **Environment**: Isolated test environment with proper fixtures
+
+### Integration Test Setup
+
+For integration tests that use PostgreSQL:
+
+```bash
+# Setup test database (first time only)
+python setup_test_db.py
+
+# Or manually create the test database
+createdb test_verbatimai
+```
+
+### Coverage Reports
+
+After running tests with coverage:
+
+```bash
+# View HTML coverage report
+open htmlcov/index.html
+
+# Coverage files generated:
+# - htmlcov/index.html (detailed HTML report)
+# - coverage.xml (XML report for CI/CD)
+# - Terminal output (summary)
+```
+
+### Troubleshooting Tests
+
+#### Virtual Environment Issues
+```bash
+# If virtual environment is not activated
+source venv/bin/activate
+
+# If pytest is missing
+pip install pytest pytest-cov
+
+# Recreate virtual environment
+./setup_venv.sh
+```
+
+#### Database Issues
+```bash
+# Ensure PostgreSQL is running
+brew services start postgresql  # macOS
+sudo systemctl start postgresql # Linux
+
+# Recreate test database
+dropdb test_verbatimai
+createdb test_verbatimai
+```
+
+#### Path Issues
+All test scripts now use dynamic path detection and work from any location:
+
+```bash
+# These work from anywhere in the project
+/path/to/verbatimai/backend/test.sh unit
+cd /tmp && /path/to/verbatimai/backend/test_smart.sh coverage
 ```
 
 ## AI Service Integration

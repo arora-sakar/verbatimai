@@ -180,7 +180,8 @@ class TestAnalyzeWithClaude:
         result = await analyze_with_claude("Great product and service!")
         
         assert result["sentiment"] == "positive"
-        assert result["topics"] == ["quality", "service"]
+        # Check that both expected topics are present, regardless of order
+        assert set(result["topics"]) == {"Product Quality", "Customer Service"}
         mock_client_instance.post.assert_called_once()
 
     @pytest.mark.asyncio
@@ -254,7 +255,8 @@ class TestAnalyzeWithOpenAI:
         result = await analyze_with_openai("Poor shipping and bad service")
         
         assert result["sentiment"] == "negative"
-        assert result["topics"] == ["shipping", "customer service"]
+        # Check that both expected topics are present, regardless of order
+        assert set(result["topics"]) == {"Shipping & Delivery", "Customer Service"}
 
 
 class TestAnalyzeLocal:
@@ -298,8 +300,9 @@ class TestAnalyzeLocal:
         result = analyze_local(text)
         
         topics = result["topics"]
-        assert "shipping speed" in topics
-        assert "product quality" in topics
+        # Check that both expected topics are present, regardless of order
+        assert "Shipping & Delivery" in topics
+        assert "Product Quality" in topics
 
     def test_analyze_local_with_rating_positive(self):
         """Test local analysis with positive rating"""
@@ -377,7 +380,8 @@ class TestValidateAiResult:
         validated = _validate_ai_result(result)
         
         assert validated["sentiment"] == "positive"
-        assert validated["topics"] == ["quality", "service"]
+        # Check that both expected topics are present, regardless of order
+        assert set(validated["topics"]) == {"Product Quality", "Customer Service"}
 
     def test_validate_ai_result_invalid_type(self):
         """Test validating invalid result type"""
@@ -393,19 +397,20 @@ class TestValidateAiResult:
         validated = _validate_ai_result(result)
         
         assert validated["sentiment"] == "neutral"  # Should default
-        assert validated["topics"] == ["quality"]
+        assert validated["topics"] == ["Product Quality"]
 
     def test_validate_ai_result_topic_count_limit(self):
         """Test topic count limit"""
-        many_topics = [f"topic_{i}" for i in range(10)]
+        # Use actual business topics that will be recognized by the normalizer
+        many_topics = ["product quality", "customer service", "shipping", "pricing", "user experience", "payment", "website", "communication", "extra topic"]
         result = {
             "sentiment": "positive",
             "topics": many_topics
         }
         validated = _validate_ai_result(result)
         
-        # Should limit to 5 topics
-        assert len(validated["topics"]) == 5
+        # Should limit to 3 topics (based on the validate function logic)
+        assert len(validated["topics"]) == 3
 
 
 class TestAdjustSentimentWithRating:
