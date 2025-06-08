@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from typing import Any
+from typing import Any, Union, Optional
 
 from ..db.database import get_db
 from ..models.models import User
@@ -158,7 +158,7 @@ def create_password_reset_token(email: str) -> str:
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
-def verify_password_reset_token(token: str) -> str | None:
+def verify_password_reset_token(token: str) -> Optional[str]:
     """Verify password reset token and return email if valid"""
     try:
         if not token:
