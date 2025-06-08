@@ -3,6 +3,9 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 from ..core.config import settings
 
+# Debug: Print database URL being used
+print(f"🔍 DEBUG: Using DATABASE_URL: {settings.DATABASE_URL[:50]}...")
+
 # Create SQLAlchemy engine
 engine = create_engine(
     settings.DATABASE_URL,

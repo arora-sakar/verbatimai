@@ -25,6 +25,11 @@ class Settings(BaseSettings):
         "postgresql://sakar@localhost:5432/verbatimai"
     )
     
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        print(f"🔍 DEBUG: DATABASE_URL from env: {os.getenv('DATABASE_URL', 'NOT_SET')[:50]}...")
+        print(f"🔍 DEBUG: Final DATABASE_URL: {self.DATABASE_URL[:50]}...")
+    
     # CORS settings - dynamically set based on environment
     @property
     def CORS_ORIGINS(self) -> List[str]:
