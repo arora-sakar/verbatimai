@@ -62,4 +62,8 @@ app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"]
 
 @app.get("/api/health", tags=["health"])
 async def health_check():
-    return {"status": "ok"}
+    return {
+        "status": "healthy",
+        "environment": settings.ENVIRONMENT,
+        "project": settings.PROJECT_NAME
+    }

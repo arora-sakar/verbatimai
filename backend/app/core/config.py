@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     # App settings
     PROJECT_NAME: str = "VerbatimAI"
     API_V1_STR: str = "/api"
-    APP_ENV: str = os.getenv("APP_ENV", "development")
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     DEBUG: bool = os.getenv("DEBUG", "True").lower() == "true"
     
     # Security settings
@@ -25,11 +25,28 @@ class Settings(BaseSettings):
         "postgresql://sakar@localhost:5432/verbatimai"
     )
     
-    # CORS settings
-    CORS_ORIGINS: List[str] = [
-        "http://localhost:3000",  # React dev server
-        "http://localhost:8000",  # FastAPI server
-    ]
+    # CORS settings - dynamically set based on environment
+    @property
+    def CORS_ORIGINS(self) -> List[str]:
+        # Default development origins
+        origins = [
+            "http://localhost:3000",  # React dev server
+            "http://localhost:8000",  # FastAPI server
+        ]
+        
+        # Add production origins from environment variable
+        backend_cors_origins = os.getenv("BACKEND_CORS_ORIGINS")
+        if backend_cors_origins:
+            try:
+                import json
+                prod_origins = json.loads(backend_cors_origins)
+                origins.extend(prod_origins)
+            except json.JSONDecodeError:
+                # If not JSON, treat as comma-separated list
+                prod_origins = [origin.strip() for origin in backend_cors_origins.split(",")]
+                origins.extend(prod_origins)
+        
+        return origins
     
     # AI Service settings
     AI_SERVICE_TYPE: str = os.getenv("AI_SERVICE_TYPE", "claude")  # claude, openai, local
@@ -54,7 +71,8 @@ class Settings(BaseSettings):
     
     model_config = ConfigDict(
         env_file=".env",
-        case_sensitive=True
+        case_sensitive=True,
+        extra="ignore"  # Ignore extra environment variables
     )
 
 settings = Settings()

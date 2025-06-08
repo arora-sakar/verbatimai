@@ -41,7 +41,8 @@ coverage/
 .env.local
 .env.development.local
 .env.test.local
-.env.production.local
+# Keep .env.production as template
+# .env.production
 
 # IDE files
 .idea/

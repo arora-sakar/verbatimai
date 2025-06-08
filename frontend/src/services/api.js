@@ -1,7 +1,19 @@
 import axios from 'axios'
 
+// Environment-based API configuration
+const getBaseURL = () => {
+  const environment = import.meta.env.MODE || 'development'
+  
+  if (environment === 'production') {
+    return import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
+  }
+  
+  // Development mode - use proxy
+  return '/api'
+}
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: getBaseURL(),
   headers: {
     'Content-Type': 'application/json',
   },
