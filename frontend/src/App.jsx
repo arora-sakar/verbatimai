@@ -7,7 +7,6 @@ import ResetPassword from './pages/ResetPassword'
 import Dashboard from './pages/Dashboard'
 import FeedbackList from './pages/FeedbackList'
 import UploadFeedback from './pages/UploadFeedback'
-import ReanalyzeFeedback from './pages/ReanalyzeFeedback'
 import Settings from './pages/Settings'
 import NotFound from './pages/NotFound'
 import Layout from './components/Layout'
@@ -46,7 +45,6 @@ function App() {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="feedback" element={<FeedbackList />} />
         <Route path="upload" element={<UploadFeedback />} />
-        <Route path="reanalyze" element={<ReanalyzeFeedback />} />
         <Route path="settings" element={<Settings />} />
       </Route>
       

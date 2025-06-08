@@ -5,7 +5,6 @@ const Sidebar = () => {
     { to: '/dashboard', name: 'Dashboard', icon: 'chart-pie' },
     { to: '/feedback', name: 'Feedback List', icon: 'list' },
     { to: '/upload', name: 'Upload Feedback', icon: 'upload' },
-    { to: '/reanalyze', name: 'Re-analyze Feedback', icon: 'refresh' },
     { to: '/settings', name: 'Settings', icon: 'cog' },
   ]
   

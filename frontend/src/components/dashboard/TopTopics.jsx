@@ -1,10 +1,12 @@
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+import { useNavigate } from 'react-router-dom';
 
 // Register Chart.js components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const TopTopics = ({ positiveTopics, negativeTopics }) => {
+  const navigate = useNavigate();
   // Ensure topics are valid arrays
   const validPositiveTopics = Array.isArray(positiveTopics) ? positiveTopics : [];
   const validNegativeTopics = Array.isArray(negativeTopics) ? negativeTopics : [];
@@ -17,6 +19,14 @@ const TopTopics = ({ positiveTopics, negativeTopics }) => {
       </div>
     );
   }
+
+  // Handle topic click - navigate to feedback list with filters
+  const handleTopicClick = (topicName, sentiment) => {
+    const params = new URLSearchParams();
+    params.set('topic', topicName);
+    params.set('sentiment', sentiment);
+    navigate(`/feedback?${params.toString()}`);
+  };
 
   const renderTopicList = (topics, type) => {
     const color = type === 'positive' ? 'text-green-600' : 'text-red-600';
@@ -33,10 +43,17 @@ const TopTopics = ({ positiveTopics, negativeTopics }) => {
             {topics.map((topic, index) => (
               <li 
                 key={index} 
-                className={`flex justify-between px-3 py-2 rounded-md border ${borderColor} ${bgColor}`}
+                className={`flex justify-between px-3 py-2 rounded-md border ${borderColor} ${bgColor} cursor-pointer hover:shadow-md transition-all duration-200 group`}
+                onClick={() => handleTopicClick(topic.topic, type)}
+                title={`Click to view all ${type} feedback about "${topic.topic}"`}
               >
-                <span className="text-sm truncate">{topic.topic}</span>
-                <span className="text-sm font-medium">{topic.count}</span>
+                <span className="text-sm truncate group-hover:text-gray-900 transition-colors">{topic.topic}</span>
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm font-medium">{topic.count}</span>
+                  <svg className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
               </li>
             ))}
           </ul>

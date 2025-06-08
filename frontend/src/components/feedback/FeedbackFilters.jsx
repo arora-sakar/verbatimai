@@ -20,6 +20,19 @@ const FeedbackFilters = ({ filters, onFilterChange }) => {
     }
   );
 
+  // Fetch topics for dropdown
+  const { data: topicsData } = useQuery(
+    ['topics', user?.id],
+    async () => {
+      const response = await api.get('/analytics/topics');
+      return response.data;
+    },
+    {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      placeholderData: [], // Default to empty array while loading
+    }
+  );
+
   // Debounce search term changes
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -43,12 +56,16 @@ const FeedbackFilters = ({ filters, onFilterChange }) => {
     onFilterChange({ source: e.target.value });
   };
 
-  const handleClearFilters = () => {
-    setSearchTerm('');
-    onFilterChange({ sentiment: '', source: '', search: '' });
+  const handleTopicChange = (e) => {
+    onFilterChange({ topic: e.target.value });
   };
 
-  const isFiltersActive = filters.sentiment || filters.source || filters.search;
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    onFilterChange({ sentiment: '', source: '', search: '', topic: '' });
+  };
+
+  const isFiltersActive = filters.sentiment || filters.source || filters.search || filters.topic;
 
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm space-y-4">
@@ -80,7 +97,7 @@ const FeedbackFilters = ({ filters, onFilterChange }) => {
 
       <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-4 sm:space-y-0">
         {/* Sentiment Filter */}
-        <div className="sm:w-1/2">
+        <div className="sm:w-1/3">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Sentiment
           </label>
@@ -119,7 +136,7 @@ const FeedbackFilters = ({ filters, onFilterChange }) => {
         </div>
 
         {/* Source Filter */}
-        <div className="sm:w-1/2">
+        <div className="sm:w-1/3">
           <label htmlFor="source" className="block text-sm font-medium text-gray-700">
             Source
           </label>
@@ -137,17 +154,67 @@ const FeedbackFilters = ({ filters, onFilterChange }) => {
             ))}
           </select>
         </div>
+
+        {/* Topic Filter */}
+        <div className="sm:w-1/3">
+          <label htmlFor="topic" className="block text-sm font-medium text-gray-700">
+            Topic
+          </label>
+          <select
+            id="topic"
+            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md"
+            value={filters.topic || ''}
+            onChange={handleTopicChange}
+          >
+            <option value="">All Topics</option>
+            {topicsData && topicsData.map((item, index) => (
+              <option key={index} value={item.topic}>
+                {item.topic} ({item.count})
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      {/* Clear Filters */}
+      {/* Active Filters Display */}
       {isFiltersActive && (
-        <div className="flex justify-end">
-          <button
-            onClick={handleClearFilters}
-            className="text-sm text-primary-600 hover:text-primary-500"
-          >
-            Clear all filters
-          </button>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707v4.586l-4-2v-2.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+              <span className="text-sm font-medium text-blue-800">Active filters:</span>
+              <div className="flex flex-wrap gap-1">
+                {filters.sentiment && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    Sentiment: {filters.sentiment}
+                  </span>
+                )}
+                {filters.source && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    Source: {filters.source}
+                  </span>
+                )}
+                {filters.topic && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    Topic: {filters.topic}
+                  </span>
+                )}
+                {filters.search && (
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    Search: "{filters.search}"
+                  </span>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={handleClearFilters}
+              className="text-sm text-blue-600 hover:text-blue-500 font-medium"
+            >
+              Clear all
+            </button>
+          </div>
         </div>
       )}
     </div>

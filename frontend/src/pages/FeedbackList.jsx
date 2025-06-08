@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from 'react-query';
+import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
 
@@ -11,13 +12,20 @@ import Pagination from '../components/common/Pagination';
 const FeedbackList = () => {
   // Get current user
   const { user } = useAuthStore();
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // Parse URL parameters for filters
+  const urlParams = new URLSearchParams(location.search);
+  const initialFilters = {
+    sentiment: urlParams.get('sentiment') || '',
+    source: urlParams.get('source') || '',
+    search: urlParams.get('search') || '',
+    topic: urlParams.get('topic') || '', // Add topic filter
+  };
   
   // State for filters and pagination
-  const [filters, setFilters] = useState({
-    sentiment: '',
-    source: '',
-    search: '',
-  });
+  const [filters, setFilters] = useState(initialFilters);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const itemsPerPage = 10;
@@ -36,6 +44,7 @@ const FeedbackList = () => {
         if (filters.sentiment) params.sentiment = filters.sentiment;
         if (filters.source) params.source = filters.source;
         if (filters.search) params.search = filters.search;
+        if (filters.topic) params.topic = filters.topic; // Add topic parameter
         
         console.log('Fetching feedback with params:', params);
         
@@ -63,9 +72,21 @@ const FeedbackList = () => {
     setCurrentPage(1);
   }, [filters]);
 
-  // Handle filter changes
+  // Handle filter changes and update URL
   const handleFilterChange = (newFilters) => {
-    setFilters(prev => ({ ...prev, ...newFilters }));
+    const updatedFilters = { ...filters, ...newFilters };
+    setFilters(updatedFilters);
+    
+    // Update URL with new filters
+    const searchParams = new URLSearchParams();
+    Object.entries(updatedFilters).forEach(([key, value]) => {
+      if (value) {
+        searchParams.set(key, value);
+      }
+    });
+    
+    const newUrl = searchParams.toString() ? `?${searchParams.toString()}` : '';
+    navigate(`/feedback${newUrl}`, { replace: true });
   };
 
   // Handle pagination
@@ -115,9 +136,9 @@ const FeedbackList = () => {
         ) : (
           <div className="p-8 text-center">
             <p className="text-gray-500">No feedback found with the current filters.</p>
-            {(filters.sentiment || filters.source || filters.search) && (
+            {(filters.sentiment || filters.source || filters.search || filters.topic) && (
               <button
-                onClick={() => setFilters({ sentiment: '', source: '', search: '' })}
+                onClick={() => setFilters({ sentiment: '', source: '', search: '', topic: '' })}
                 className="mt-2 text-sm text-primary-600 hover:text-primary-500"
               >
                 Clear all filters

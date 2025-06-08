@@ -6,6 +6,121 @@ from ..core.config import settings
 # Set up logging
 logger = logging.getLogger(__name__)
 
+# Standard topic categories that all variations map to
+STANDARD_TOPICS = {
+    "product_quality": {
+        "name": "Product Quality",
+        "keywords": ["product", "quality", "item", "goods", "merchandise", "materials", "build", "craftsmanship", "durability", "defect", "broken", "poor quality", "excellent quality", "high quality", "low quality"]
+    },
+    "customer_service": {
+        "name": "Customer Service", 
+        "keywords": ["service", "staff", "employee", "support", "help", "representative", "team", "assistance", "rude", "helpful", "friendly", "professional", "attitude"]
+    },
+    "shipping_delivery": {
+        "name": "Shipping & Delivery",
+        "keywords": ["shipping", "delivery", "shipping speed", "fast delivery", "slow delivery", "delayed", "on time", "package", "packaging", "arrived", "logistics"]
+    },
+    "pricing_value": {
+        "name": "Pricing & Value",
+        "keywords": ["price", "cost", "expensive", "cheap", "affordable", "value", "money", "pricing", "overpriced", "reasonable", "deal", "discount"]
+    },
+    "user_experience": {
+        "name": "User Experience",
+        "keywords": ["easy", "difficult", "user friendly", "confusing", "intuitive", "complicated", "simple", "experience", "interface", "usability"]
+    },
+    "payment_billing": {
+        "name": "Payment & Billing",
+        "keywords": ["payment", "billing", "charge", "credit card", "checkout", "invoice", "subscription", "refund", "transaction"]
+    },
+    "website_app": {
+        "name": "Website & App",
+        "keywords": ["website", "app", "application", "mobile", "browser", "online", "platform", "navigation", "loading", "crashes"]
+    },
+    "communication": {
+        "name": "Communication",
+        "keywords": ["communication", "response", "email", "phone", "chat", "contact", "reply", "information", "updates", "notification"]
+    }
+}
+
+class TopicNormalizer:
+    """Normalizes topic variations to standard categories"""
+    
+    def __init__(self):
+        self.topic_map = self._build_topic_map()
+    
+    def _build_topic_map(self) -> Dict[str, str]:
+        """Build a mapping from keywords to standard topic names"""
+        topic_map = {}
+        
+        for topic_id, topic_data in STANDARD_TOPICS.items():
+            topic_name = topic_data["name"]
+            keywords = topic_data["keywords"]
+            
+            # Map each keyword to this topic
+            for keyword in keywords:
+                topic_map[keyword.lower()] = topic_name
+                
+        return topic_map
+    
+    def normalize_topics(self, raw_topics: List[str]) -> List[str]:
+        """Convert raw topic phrases to standardized topic names"""
+        normalized = set()  # Use set to avoid duplicates
+        
+        for raw_topic in raw_topics:
+            if not raw_topic or not raw_topic.strip():
+                continue
+                
+            raw_topic_clean = raw_topic.lower().strip()
+            
+            # Try exact match first
+            if raw_topic_clean in self.topic_map:
+                normalized.add(self.topic_map[raw_topic_clean])
+                continue
+            
+            # Try partial matching
+            matched = False
+            for keyword, standard_topic in self.topic_map.items():
+                if keyword in raw_topic_clean or raw_topic_clean in keyword:
+                    normalized.add(standard_topic)
+                    matched = True
+                    break
+            
+            # If no match found, try fuzzy matching for common variations
+            if not matched:
+                normalized_topic = self._fuzzy_match_topic(raw_topic_clean)
+                if normalized_topic:
+                    normalized.add(normalized_topic)
+        
+        return list(normalized)
+    
+    def _fuzzy_match_topic(self, raw_topic: str) -> str:
+        """Handle common topic variations that don't match keywords exactly"""
+        raw_topic = raw_topic.lower()
+        
+        # Product quality variations
+        if any(word in raw_topic for word in ["bad", "good", "poor", "excellent", "high", "low"]) and \
+           any(word in raw_topic for word in ["product", "quality", "item"]):
+            return "Product Quality"
+        
+        # Service variations  
+        if any(word in raw_topic for word in ["bad", "good", "poor", "excellent", "great", "terrible"]) and \
+           any(word in raw_topic for word in ["service", "staff", "support"]):
+            return "Customer Service"
+        
+        # Shipping variations
+        if any(word in raw_topic for word in ["fast", "slow", "quick", "delayed", "late"]) and \
+           any(word in raw_topic for word in ["shipping", "delivery", "arrived"]):
+            return "Shipping & Delivery"
+        
+        # Price variations
+        if any(word in raw_topic for word in ["expensive", "cheap", "affordable", "overpriced"]):
+            return "Pricing & Value"
+        
+        return None
+
+# Initialize normalizer
+topic_normalizer = TopicNormalizer()
+
 async def analyze_feedback(text: str, rating: int = None) -> Dict[str, Any]:
     """
     Analyze feedback text to extract sentiment and topics
@@ -116,7 +231,7 @@ async def analyze_with_claude(text: str, rating: int = None) -> Dict[str, Any]:
                             "role": "user",
                             "content": f"""Analyze this customer feedback and return only a JSON object with:
 1. sentiment: "positive", "negative", or "neutral"
-2. topics: an array of up to 5 key topics/themes (short phrases, max 50 chars each)
+2. topics: an array of 1-3 key business topics/themes from this list: product quality, customer service, shipping & delivery, pricing & value, user experience, payment & billing, website & app, communication. Focus on business aspects mentioned in the feedback.
 
 Feedback: "{text}"
 
@@ -163,6 +278,11 @@ Return only the JSON object, no other text:"""
             
             # Validate the parsed result
             validated_result = _validate_ai_result(parsed_result)
+            
+            # Normalize topics to standard categories
+            if validated_result.get("topics"):
+                normalized_topics = topic_normalizer.normalize_topics(validated_result["topics"])
+                validated_result["topics"] = normalized_topics
             
             logger.info("Successfully analyzed feedback with Claude API")
             return validated_result
@@ -214,7 +334,7 @@ async def analyze_with_openai(text: str, rating: int = None) -> Dict[str, Any]:
                             "role": "user",
                             "content": f"""Analyze this customer feedback and return only a JSON object with:
 1. sentiment: "positive", "negative", or "neutral"
-2. topics: an array of up to 5 key topics/themes (short phrases, max 50 chars each)
+2. topics: an array of 1-3 key business topics/themes from this list: product quality, customer service, shipping & delivery, pricing & value, user experience, payment & billing, website & app, communication. Focus on business aspects mentioned in the feedback.
 
 Feedback: "{text}"
 
@@ -264,6 +384,11 @@ Return only the JSON object, no other text:"""
             
             # Validate the parsed result
             validated_result = _validate_ai_result(parsed_result)
+            
+            # Normalize topics to standard categories
+            if validated_result.get("topics"):
+                normalized_topics = topic_normalizer.normalize_topics(validated_result["topics"])
+                validated_result["topics"] = normalized_topics
             
             logger.info("Successfully analyzed feedback with OpenAI API")
             return validated_result
@@ -343,25 +468,23 @@ def analyze_local(text: str, rating: int = None) -> Dict[str, Any]:
         # No rating provided, use text-based sentiment
         final_sentiment = text_sentiment
     
-    # Very simple topic extraction based on common business aspects
-    topics = []
-    topic_keywords = {
-        "shipping speed": ["shipping", "delivery", "arrive", "package", "fast", "quick", "slow"],
-        "product quality": ["quality", "durability", "material", "broke", "damaged", "excellent", "defective"],
-        "customer service": ["service", "support", "representative", "help", "assistance", "staff", "friendly"],
-        "price": ["price", "cost", "expensive", "cheap", "afford", "value", "money"],
-        "website": ["website", "site", "online", "checkout", "cart", "app"],
-        "overall satisfaction": ["satisfied", "happy", "pleased", "disappointed", "recommend", "love", "hate"]
-    }
+    # Extract topics using standard categories and normalize them
+    detected_topics = []
     
-    # Check for topic keywords in text
-    for topic, keywords in topic_keywords.items():
+    # Check for topic keywords in text using our standard categories
+    for topic_id, topic_data in STANDARD_TOPICS.items():
+        topic_name = topic_data["name"]
+        keywords = topic_data["keywords"]
+        
         if any(keyword in text_lower for keyword in keywords):
-            topics.append(topic)
-            logger.debug(f"Found topic: {topic}")
+            detected_topics.append(topic_name)
+            logger.debug(f"Found topic: {topic_name}")
     
-    # Ensure we always return a list for topics
-    topics = topics[:5] if topics else []
+    # Normalize topics through our normalizer (handles duplicates and variations)
+    topics = topic_normalizer.normalize_topics(detected_topics)
+    
+    # Limit to 3 topics maximum for local analysis
+    topics = topics[:3] if topics else ["General Feedback"]
     
     logger.info(f"Local analysis result: sentiment={final_sentiment}, topics={topics}")
     
@@ -458,8 +581,13 @@ def _validate_ai_result(result: Dict[str, Any]) -> Dict[str, Any]:
             topic_str = str(topic).strip()
             if topic_str and len(topic_str) <= 50:  # Max 50 chars per topic
                 clean_topics.append(topic_str)
-        if len(clean_topics) >= 5:  # Max 5 topics
+        if len(clean_topics) >= 3:  # Max 3 topics for better focus
             break
+    
+    # Normalize the cleaned topics
+    if clean_topics:
+        normalized_topics = topic_normalizer.normalize_topics(clean_topics)
+        clean_topics = normalized_topics
     
     return {
         "sentiment": sentiment,

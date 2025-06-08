@@ -66,6 +66,34 @@ async def get_analytics_summary(
         "top_negative_topics": top_negative_topics,
     }
 
+@router.get("/topics")
+async def get_feedback_by_topic(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get a breakdown of feedback by topic"""
+    # Get all feedback items for the current user that have topics
+    user_feedback = db.query(FeedbackItem).filter(
+        FeedbackItem.owner_id == current_user.id,
+        FeedbackItem.topics.isnot(None)  # Only include items with topics
+    ).all()
+    
+    # Count all topics across all feedback items
+    topic_counts = {}
+    for item in user_feedback:
+        if item.topics:
+            for topic in item.topics:
+                if topic and topic.strip():  # Ensure topic is not empty
+                    topic_counts[topic] = topic_counts.get(topic, 0) + 1
+    
+    # Format the results, sorted by count (descending)
+    result = [
+        {"topic": topic, "count": count}
+        for topic, count in sorted(topic_counts.items(), key=lambda x: x[1], reverse=True)
+    ]
+    
+    return result
+
 @router.get("/sources")
 async def get_feedback_by_source(
     db: Session = Depends(get_db),
