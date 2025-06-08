@@ -36,16 +36,22 @@ class Settings(BaseSettings):
         
         # Add production origins from environment variable
         backend_cors_origins = os.getenv("BACKEND_CORS_ORIGINS")
+        print(f"🔍 DEBUG: BACKEND_CORS_ORIGINS = {backend_cors_origins}")
+        
         if backend_cors_origins:
             try:
                 import json
                 prod_origins = json.loads(backend_cors_origins)
                 origins.extend(prod_origins)
-            except json.JSONDecodeError:
+                print(f"🔍 DEBUG: Parsed JSON CORS origins: {prod_origins}")
+            except json.JSONDecodeError as e:
+                print(f"⚠️  DEBUG: JSON decode failed: {e}")
                 # If not JSON, treat as comma-separated list
                 prod_origins = [origin.strip() for origin in backend_cors_origins.split(",")]
                 origins.extend(prod_origins)
+                print(f"🔍 DEBUG: Parsed CSV CORS origins: {prod_origins}")
         
+        print(f"🔍 DEBUG: Final CORS origins: {origins}")
         return origins
     
     # AI Service settings
